@@ -1,5 +1,5 @@
 {
-  "ultimo_aggiornamento": "2026-08-19 21:39:39",
+  "ultimo_aggiornamento": "2026-08-19 22:37:01",
   "stazione": {
     "id": "1545",
     "nome": "San Siro Alpe Rescascia",
@@ -13,8 +13,6 @@
     "ritardo_siccita_applicato": 2,
     "soglia_efficace_richiesta": 45.0,
     "fattore_smorzamento_resa": 0.95,
-    "giorni_favonio_subiti": 0,
-    "t_media_attuale": 20.5,
     "t_max_attuale": 23.2,
     "t_min_attuale": 17.9,
     "rh_media_attuale": 62.9,
@@ -24,39 +22,27 @@
   "zone": [
     {
       "zona": "Betulle Sud-Est",
-      "indice_buttata": 0.0,
+      "indice": 0.0,
       "t_min_stimata": 19.1,
-      "t_max_stimata": 26.9,
-      "umidita_stimata": 52.9,
-      "giorni_mancanti_al_picco": 10,
-      "stato": "In incubazione (picco tra 10 gg)"
+      "t_max_stimata": 26.9
     },
     {
       "zona": "Betulle Nord-Est",
-      "indice_buttata": 0.0,
+      "indice": 0.0,
       "t_min_stimata": 19.1,
-      "t_max_stimata": 23.4,
-      "umidita_stimata": 74.9,
-      "giorni_mancanti_al_picco": 9,
-      "stato": "In incubazione (picco tra 9 gg)"
+      "t_max_stimata": 23.4
     },
     {
       "zona": "Faggeta Alta",
-      "indice_buttata": 0.0,
+      "indice": 0.0,
       "t_min_stimata": 17.5,
-      "t_max_stimata": 25.3,
-      "umidita_stimata": 52.9,
-      "giorni_mancanti_al_picco": 13,
-      "stato": "In incubazione (picco tra 13 gg)"
+      "t_max_stimata": 25.3
     },
     {
-      "zona": "Pini & Retroverso Svizzera",
-      "indice_buttata": 0.0,
+      "zona": "Pini/Svizzera",
+      "indice": 0.0,
       "t_min_stimata": 15.8,
-      "t_max_stimata": 19.6,
-      "umidita_stimata": 80.9,
-      "giorni_mancanti_al_picco": 14,
-      "stato": "In incubazione (picco tra 14 gg)"
+      "t_max_stimata": 19.6
     }
   ],
   "storico_completo": [
@@ -473,6 +459,578 @@
       "t_min": 17.9,
       "rh_media": 62.9,
       "vento_max": 20.5
+    }
+  ],
+  "calendario_futuro": [
+    {
+      "data": "2026-08-20",
+      "meteo": {
+        "data": "2026-08-20",
+        "pioggia_mm": 159.0,
+        "t_max": 23.0,
+        "t_min": 20.3,
+        "t_media": 21.6,
+        "vento_max": 26.2,
+        "rh_media": 85.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 21.5,
+          "t_max_stimata": 26.7
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.0,
+          "t_min_stimata": 21.5,
+          "t_max_stimata": 23.2
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 19.9,
+          "t_max_stimata": 25.1
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 18.2,
+          "t_max_stimata": 19.4
+        }
+      ]
+    },
+    {
+      "data": "2026-08-21",
+      "meteo": {
+        "data": "2026-08-21",
+        "pioggia_mm": 13.5,
+        "t_max": 22.7,
+        "t_min": 19.2,
+        "t_media": 20.9,
+        "vento_max": 15.9,
+        "rh_media": 85.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 20.4,
+          "t_max_stimata": 26.4
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.0,
+          "t_min_stimata": 20.4,
+          "t_max_stimata": 22.9
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 18.8,
+          "t_max_stimata": 24.8
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 17.1,
+          "t_max_stimata": 19.1
+        }
+      ]
+    },
+    {
+      "data": "2026-08-22",
+      "meteo": {
+        "data": "2026-08-22",
+        "pioggia_mm": 0.0,
+        "t_max": 28.1,
+        "t_min": 19.5,
+        "t_media": 23.8,
+        "vento_max": 9.5,
+        "rh_media": 55.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 20.7,
+          "t_max_stimata": 31.8
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.0,
+          "t_min_stimata": 20.7,
+          "t_max_stimata": 28.3
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 19.1,
+          "t_max_stimata": 30.2
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 17.4,
+          "t_max_stimata": 24.5
+        }
+      ]
+    },
+    {
+      "data": "2026-08-23",
+      "meteo": {
+        "data": "2026-08-23",
+        "pioggia_mm": 0.0,
+        "t_max": 27.8,
+        "t_min": 20.6,
+        "t_media": 24.2,
+        "vento_max": 8.1,
+        "rh_media": 55.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 21.8,
+          "t_max_stimata": 31.5
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.0,
+          "t_min_stimata": 21.8,
+          "t_max_stimata": 28.0
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 20.2,
+          "t_max_stimata": 29.9
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 18.5,
+          "t_max_stimata": 24.2
+        }
+      ]
+    },
+    {
+      "data": "2026-08-24",
+      "meteo": {
+        "data": "2026-08-24",
+        "pioggia_mm": 21.9,
+        "t_max": 27.7,
+        "t_min": 21.1,
+        "t_media": 24.4,
+        "vento_max": 8.4,
+        "rh_media": 85.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 22.3,
+          "t_max_stimata": 31.4
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.1,
+          "t_min_stimata": 22.3,
+          "t_max_stimata": 27.9
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 20.7,
+          "t_max_stimata": 29.8
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 19.0,
+          "t_max_stimata": 24.1
+        }
+      ]
+    },
+    {
+      "data": "2026-08-25",
+      "meteo": {
+        "data": "2026-08-25",
+        "pioggia_mm": 26.4,
+        "t_max": 27.8,
+        "t_min": 20.8,
+        "t_media": 24.3,
+        "vento_max": 7.4,
+        "rh_media": 85.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 22.0,
+          "t_max_stimata": 31.5
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.0,
+          "t_min_stimata": 22.0,
+          "t_max_stimata": 28.0
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 20.4,
+          "t_max_stimata": 29.9
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 18.7,
+          "t_max_stimata": 24.2
+        }
+      ]
+    },
+    {
+      "data": "2026-08-26",
+      "meteo": {
+        "data": "2026-08-26",
+        "pioggia_mm": 0.0,
+        "t_max": 29.2,
+        "t_min": 22.1,
+        "t_media": 25.6,
+        "vento_max": 6.9,
+        "rh_media": 55.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 23.3,
+          "t_max_stimata": 32.9
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.0,
+          "t_min_stimata": 23.3,
+          "t_max_stimata": 29.4
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 21.7,
+          "t_max_stimata": 31.3
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 20.0,
+          "t_max_stimata": 25.6
+        }
+      ]
+    },
+    {
+      "data": "2026-08-27",
+      "meteo": {
+        "data": "2026-08-27",
+        "pioggia_mm": 0.0,
+        "t_max": 28.2,
+        "t_min": 20.5,
+        "t_media": 24.4,
+        "vento_max": 4.0,
+        "rh_media": 55.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 21.7,
+          "t_max_stimata": 31.9
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.0,
+          "t_min_stimata": 21.7,
+          "t_max_stimata": 28.4
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 20.1,
+          "t_max_stimata": 30.3
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 18.4,
+          "t_max_stimata": 24.6
+        }
+      ]
+    },
+    {
+      "data": "2026-08-28",
+      "meteo": {
+        "data": "2026-08-28",
+        "pioggia_mm": 34.2,
+        "t_max": 23.4,
+        "t_min": 20.1,
+        "t_media": 21.8,
+        "vento_max": 7.1,
+        "rh_media": 85.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 21.3,
+          "t_max_stimata": 27.1
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.4,
+          "t_min_stimata": 21.3,
+          "t_max_stimata": 23.6
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 19.7,
+          "t_max_stimata": 25.5
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 18.0,
+          "t_max_stimata": 19.8
+        }
+      ]
+    },
+    {
+      "data": "2026-08-29",
+      "meteo": {
+        "data": "2026-08-29",
+        "pioggia_mm": 5.4,
+        "t_max": 27.8,
+        "t_min": 19.5,
+        "t_media": 23.6,
+        "vento_max": 8.6,
+        "rh_media": 85.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 20.7,
+          "t_max_stimata": 31.5
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.0,
+          "t_min_stimata": 20.7,
+          "t_max_stimata": 28.0
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 19.1,
+          "t_max_stimata": 29.9
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 17.4,
+          "t_max_stimata": 24.2
+        }
+      ]
+    },
+    {
+      "data": "2026-08-30",
+      "meteo": {
+        "data": "2026-08-30",
+        "pioggia_mm": 0.0,
+        "t_max": 25.0,
+        "t_min": 17.4,
+        "t_media": 21.2,
+        "vento_max": 5.0,
+        "rh_media": 55.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 18.6,
+          "t_max_stimata": 28.7
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.0,
+          "t_min_stimata": 18.6,
+          "t_max_stimata": 25.2
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 17.0,
+          "t_max_stimata": 27.1
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 15.3,
+          "t_max_stimata": 21.4
+        }
+      ]
+    },
+    {
+      "data": "2026-08-31",
+      "meteo": {
+        "data": "2026-08-31",
+        "pioggia_mm": 1.2,
+        "t_max": 24.6,
+        "t_min": 18.9,
+        "t_media": 21.8,
+        "vento_max": 7.4,
+        "rh_media": 85.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 20.1,
+          "t_max_stimata": 28.3
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.1,
+          "t_min_stimata": 20.1,
+          "t_max_stimata": 24.8
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 18.5,
+          "t_max_stimata": 26.7
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 16.8,
+          "t_max_stimata": 21.0
+        }
+      ]
+    },
+    {
+      "data": "2026-09-01",
+      "meteo": {
+        "data": "2026-09-01",
+        "pioggia_mm": 7.2,
+        "t_max": 20.9,
+        "t_min": 19.8,
+        "t_media": 20.4,
+        "vento_max": 2.7,
+        "rh_media": 85.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 21.0,
+          "t_max_stimata": 24.6
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.5,
+          "t_min_stimata": 21.0,
+          "t_max_stimata": 21.1
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 19.4,
+          "t_max_stimata": 23.0
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 17.7,
+          "t_max_stimata": 17.3
+        }
+      ]
+    },
+    {
+      "data": "2026-09-02",
+      "meteo": {
+        "data": "2026-09-02",
+        "pioggia_mm": 13.2,
+        "t_max": 23.1,
+        "t_min": 19.2,
+        "t_media": 21.1,
+        "vento_max": 6.0,
+        "rh_media": 85.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.1,
+          "t_min_stimata": 20.4,
+          "t_max_stimata": 26.8
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 1.2,
+          "t_min_stimata": 20.4,
+          "t_max_stimata": 23.3
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 18.8,
+          "t_max_stimata": 25.2
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 17.1,
+          "t_max_stimata": 19.5
+        }
+      ]
+    },
+    {
+      "data": "2026-09-03",
+      "meteo": {
+        "data": "2026-09-03",
+        "pioggia_mm": 0.6,
+        "t_max": 29.2,
+        "t_min": 17.9,
+        "t_media": 23.5,
+        "vento_max": 10.2,
+        "rh_media": 55.0
+      },
+      "zone": [
+        {
+          "zona": "Betulle Sud-Est",
+          "indice": 0.0,
+          "t_min_stimata": 19.1,
+          "t_max_stimata": 32.9
+        },
+        {
+          "zona": "Betulle Nord-Est",
+          "indice": 0.4,
+          "t_min_stimata": 19.1,
+          "t_max_stimata": 29.4
+        },
+        {
+          "zona": "Faggeta Alta",
+          "indice": 0.0,
+          "t_min_stimata": 17.5,
+          "t_max_stimata": 31.3
+        },
+        {
+          "zona": "Pini/Svizzera",
+          "indice": 0.0,
+          "t_min_stimata": 15.8,
+          "t_max_stimata": 25.6
+        }
+      ]
     }
   ]
 }
