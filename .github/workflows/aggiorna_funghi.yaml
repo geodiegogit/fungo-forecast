@@ -4,21 +4,21 @@ on:
   schedule:
     # Esegue ogni notte alle 01:00 UTC (03:00 ora italiana estiva)
     - cron: '0 1 * * *'
-  workflow_dispatch: # Permette anche l'avvio manuale con un clic da GitHub
+  workflow_dispatch:
 
 permissions:
-  contents: write # Permette ad Action di salvare le modifiche nel repo
+  contents: write
 
 jobs:
   aggiorna-dati:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout del repository
-        uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v5
 
       - name: Configura Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -31,10 +31,11 @@ jobs:
         run: |
           python main.py
 
-      - name: Salva e fai Push del JSON aggiornato
+      - name: Salva e carica JSON aggiornato
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add data/previsioni.json
           git commit -m "Auto-update previsioni meteo funghi [skip ci]" || exit 0
           git push
+          
