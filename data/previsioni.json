@@ -1,5 +1,5 @@
 {
-  "ultimo_aggiornamento": "2026-08-19 21:15:47",
+  "ultimo_aggiornamento": "2026-08-19 21:39:39",
   "stazione": {
     "id": "1545",
     "nome": "San Siro Alpe Rescascia",
@@ -10,58 +10,413 @@
     "data_evento": "2026-08-18",
     "pioggia_evento_mm": 56.0,
     "giorni_da_evento": 1,
-    "pioggia_precedente_30gg": 67.2,
-    "livello_siccita": "Lieve",
     "ritardo_siccita_applicato": 2,
     "soglia_efficace_richiesta": 45.0,
     "fattore_smorzamento_resa": 0.95,
+    "giorni_favonio_subiti": 0,
     "t_media_attuale": 20.5,
+    "t_max_attuale": 23.2,
+    "t_min_attuale": 17.9,
     "rh_media_attuale": 62.9,
-    "vento_max_attuale": 20.5
+    "vento_max_attuale": 20.5,
+    "pioggia_oggi": 0.0
   },
   "zone": [
     {
       "zona": "Betulle Sud-Est",
       "indice_buttata": 0.0,
-      "temp_stimata": 22.9,
-      "umidita_stimata": 54.9,
-      "giorno_picco_calcolato": "+11 gg da pioggia",
+      "t_min_stimata": 19.1,
+      "t_max_stimata": 26.9,
+      "umidita_stimata": 52.9,
       "giorni_mancanti_al_picco": 10,
       "stato": "In incubazione (picco tra 10 gg)"
     },
     {
       "zona": "Betulle Nord-Est",
       "indice_buttata": 0.0,
-      "temp_stimata": 21.2,
+      "t_min_stimata": 19.1,
+      "t_max_stimata": 23.4,
       "umidita_stimata": 74.9,
-      "giorno_picco_calcolato": "+10 gg da pioggia",
       "giorni_mancanti_al_picco": 9,
       "stato": "In incubazione (picco tra 9 gg)"
     },
     {
       "zona": "Faggeta Alta",
       "indice_buttata": 0.0,
-      "temp_stimata": 21.3,
-      "umidita_stimata": 54.9,
-      "giorno_picco_calcolato": "+14 gg da pioggia",
+      "t_min_stimata": 17.5,
+      "t_max_stimata": 25.3,
+      "umidita_stimata": 52.9,
       "giorni_mancanti_al_picco": 13,
       "stato": "In incubazione (picco tra 13 gg)"
     },
     {
       "zona": "Pini & Retroverso Svizzera",
       "indice_buttata": 0.0,
-      "temp_stimata": 18.2,
+      "t_min_stimata": 15.8,
+      "t_max_stimata": 19.6,
       "umidita_stimata": 80.9,
-      "giorno_picco_calcolato": "+15 gg da pioggia",
       "giorni_mancanti_al_picco": 14,
       "stato": "In incubazione (picco tra 14 gg)"
     }
   ],
-  "storico_recente": [
+  "storico_completo": [
+    {
+      "data": "2026-07-05",
+      "pioggia_mm": 0.0,
+      "t_media": 21.2,
+      "t_max": 26.8,
+      "t_min": 16.4,
+      "rh_media": 32.2,
+      "vento_max": 24.3
+    },
+    {
+      "data": "2026-07-06",
+      "pioggia_mm": 0.0,
+      "t_media": 21.1,
+      "t_max": 26.0,
+      "t_min": 18.3,
+      "rh_media": 38.9,
+      "vento_max": 19.8
+    },
+    {
+      "data": "2026-07-07",
+      "pioggia_mm": 0.0,
+      "t_media": 21.1,
+      "t_max": 24.0,
+      "t_min": 16.5,
+      "rh_media": 37.6,
+      "vento_max": 24.5
+    },
+    {
+      "data": "2026-07-08",
+      "pioggia_mm": 0.0,
+      "t_media": 23.4,
+      "t_max": 28.7,
+      "t_min": 19.8,
+      "rh_media": 30.2,
+      "vento_max": 14.8
+    },
+    {
+      "data": "2026-07-09",
+      "pioggia_mm": 0.0,
+      "t_media": 21.5,
+      "t_max": 25.1,
+      "t_min": 18.3,
+      "rh_media": 47.8,
+      "vento_max": 25.2
+    },
+    {
+      "data": "2026-07-10",
+      "pioggia_mm": 1.4,
+      "t_media": 20.6,
+      "t_max": 25.3,
+      "t_min": 17.6,
+      "rh_media": 63.8,
+      "vento_max": 29.0
+    },
+    {
+      "data": "2026-07-11",
+      "pioggia_mm": 0.0,
+      "t_media": 20.3,
+      "t_max": 24.9,
+      "t_min": 16.0,
+      "rh_media": 69.3,
+      "vento_max": 41.6
+    },
+    {
+      "data": "2026-07-12",
+      "pioggia_mm": 0.0,
+      "t_media": 20.4,
+      "t_max": 24.1,
+      "t_min": 16.2,
+      "rh_media": 68.5,
+      "vento_max": 25.0
+    },
+    {
+      "data": "2026-07-13",
+      "pioggia_mm": 0.0,
+      "t_media": 20.2,
+      "t_max": 23.7,
+      "t_min": 17.0,
+      "rh_media": 76.5,
+      "vento_max": 29.9
+    },
+    {
+      "data": "2026-07-14",
+      "pioggia_mm": 6.4,
+      "t_media": 21.1,
+      "t_max": 25.4,
+      "t_min": 16.8,
+      "rh_media": 68.7,
+      "vento_max": 25.4
+    },
+    {
+      "data": "2026-07-15",
+      "pioggia_mm": 8.4,
+      "t_media": 19.7,
+      "t_max": 24.6,
+      "t_min": 16.3,
+      "rh_media": 64.3,
+      "vento_max": 30.1
+    },
+    {
+      "data": "2026-07-16",
+      "pioggia_mm": 0.0,
+      "t_media": 20.6,
+      "t_max": 24.7,
+      "t_min": 16.0,
+      "rh_media": 64.1,
+      "vento_max": 28.3
+    },
+    {
+      "data": "2026-07-17",
+      "pioggia_mm": 14.2,
+      "t_media": 19.8,
+      "t_max": 23.1,
+      "t_min": 14.5,
+      "rh_media": 72.3,
+      "vento_max": 31.5
+    },
+    {
+      "data": "2026-07-18",
+      "pioggia_mm": 0.0,
+      "t_media": 21.0,
+      "t_max": 25.5,
+      "t_min": 17.3,
+      "rh_media": 59.3,
+      "vento_max": 23.4
+    },
+    {
+      "data": "2026-07-19",
+      "pioggia_mm": 0.0,
+      "t_media": 19.8,
+      "t_max": 25.0,
+      "t_min": 16.2,
+      "rh_media": 56.6,
+      "vento_max": 19.4
+    },
+    {
+      "data": "2026-07-20",
+      "pioggia_mm": 0.0,
+      "t_media": 18.9,
+      "t_max": 21.5,
+      "t_min": 17.1,
+      "rh_media": 65.7,
+      "vento_max": 25.2
+    },
+    {
+      "data": "2026-07-21",
+      "pioggia_mm": 0.8,
+      "t_media": 17.6,
+      "t_max": 21.8,
+      "t_min": 13.8,
+      "rh_media": 66.7,
+      "vento_max": 22.7
+    },
+    {
+      "data": "2026-07-22",
+      "pioggia_mm": 0.0,
+      "t_media": 17.1,
+      "t_max": 21.4,
+      "t_min": 12.4,
+      "rh_media": 51.6,
+      "vento_max": 23.8
+    },
+    {
+      "data": "2026-07-23",
+      "pioggia_mm": 0.0,
+      "t_media": 17.2,
+      "t_max": 21.2,
+      "t_min": 14.1,
+      "rh_media": 63.8,
+      "vento_max": 16.6
+    },
+    {
+      "data": "2026-07-24",
+      "pioggia_mm": 0.0,
+      "t_media": 17.5,
+      "t_max": 21.5,
+      "t_min": 13.8,
+      "rh_media": 50.3,
+      "vento_max": 23.9
+    },
+    {
+      "data": "2026-07-25",
+      "pioggia_mm": 0.0,
+      "t_media": 17.3,
+      "t_max": 22.1,
+      "t_min": 13.9,
+      "rh_media": 66.5,
+      "vento_max": 22.3
+    },
+    {
+      "data": "2026-07-26",
+      "pioggia_mm": 4.6,
+      "t_media": 16.6,
+      "t_max": 20.4,
+      "t_min": 14.0,
+      "rh_media": 73.6,
+      "vento_max": 17.8
+    },
+    {
+      "data": "2026-07-27",
+      "pioggia_mm": 0.0,
+      "t_media": 20.9,
+      "t_max": 26.5,
+      "t_min": 15.8,
+      "rh_media": 47.8,
+      "vento_max": 22.1
+    },
+    {
+      "data": "2026-07-28",
+      "pioggia_mm": 0.0,
+      "t_media": 20.1,
+      "t_max": 23.6,
+      "t_min": 17.0,
+      "rh_media": 62.2,
+      "vento_max": 21.4
+    },
+    {
+      "data": "2026-07-29",
+      "pioggia_mm": 0.0,
+      "t_media": 20.9,
+      "t_max": 24.7,
+      "t_min": 17.5,
+      "rh_media": 75.3,
+      "vento_max": 21.6
+    },
+    {
+      "data": "2026-07-30",
+      "pioggia_mm": 0.0,
+      "t_media": 23.4,
+      "t_max": 27.7,
+      "t_min": 19.1,
+      "rh_media": 64.4,
+      "vento_max": 24.3
+    },
+    {
+      "data": "2026-07-31",
+      "pioggia_mm": 0.0,
+      "t_media": 23.9,
+      "t_max": 27.5,
+      "t_min": 20.5,
+      "rh_media": 56.2,
+      "vento_max": 37.3
+    },
+    {
+      "data": "2026-08-01",
+      "pioggia_mm": 6.8,
+      "t_media": 22.6,
+      "t_max": 28.3,
+      "t_min": 16.6,
+      "rh_media": 56.5,
+      "vento_max": 46.1
+    },
+    {
+      "data": "2026-08-02",
+      "pioggia_mm": 2.2,
+      "t_media": 20.8,
+      "t_max": 24.5,
+      "t_min": 16.4,
+      "rh_media": 57.4,
+      "vento_max": 35.8
+    },
+    {
+      "data": "2026-08-03",
+      "pioggia_mm": 0.0,
+      "t_media": 23.5,
+      "t_max": 28.1,
+      "t_min": 20.7,
+      "rh_media": 53.5,
+      "vento_max": 19.3
+    },
+    {
+      "data": "2026-08-04",
+      "pioggia_mm": 0.0,
+      "t_media": 24.1,
+      "t_max": 28.0,
+      "t_min": 20.2,
+      "rh_media": 49.3,
+      "vento_max": 21.1
+    },
+    {
+      "data": "2026-08-05",
+      "pioggia_mm": 0.0,
+      "t_media": 24.7,
+      "t_max": 29.9,
+      "t_min": 20.8,
+      "rh_media": 45.1,
+      "vento_max": 21.6
+    },
+    {
+      "data": "2026-08-06",
+      "pioggia_mm": 0.0,
+      "t_media": 24.7,
+      "t_max": 29.3,
+      "t_min": 20.6,
+      "rh_media": 43.1,
+      "vento_max": 19.4
+    },
+    {
+      "data": "2026-08-07",
+      "pioggia_mm": 29.6,
+      "t_media": 19.3,
+      "t_max": 22.0,
+      "t_min": 14.9,
+      "rh_media": 63.1,
+      "vento_max": 33.1
+    },
+    {
+      "data": "2026-08-08",
+      "pioggia_mm": 0.0,
+      "t_media": 20.8,
+      "t_max": 24.8,
+      "t_min": 18.2,
+      "rh_media": 61.6,
+      "vento_max": 23.6
+    },
+    {
+      "data": "2026-08-09",
+      "pioggia_mm": 0.0,
+      "t_media": 21.6,
+      "t_max": 25.5,
+      "t_min": 18.2,
+      "rh_media": 65.5,
+      "vento_max": 27.2
+    },
+    {
+      "data": "2026-08-10",
+      "pioggia_mm": 0.0,
+      "t_media": 22.7,
+      "t_max": 26.3,
+      "t_min": 19.2,
+      "rh_media": 52.9,
+      "vento_max": 24.8
+    },
+    {
+      "data": "2026-08-11",
+      "pioggia_mm": 0.0,
+      "t_media": 23.6,
+      "t_max": 27.5,
+      "t_min": 19.2,
+      "rh_media": 47.6,
+      "vento_max": 28.4
+    },
+    {
+      "data": "2026-08-12",
+      "pioggia_mm": 9.0,
+      "t_media": 23.1,
+      "t_max": 27.1,
+      "t_min": 18.8,
+      "rh_media": 55.4,
+      "vento_max": 25.7
+    },
     {
       "data": "2026-08-13",
       "pioggia_mm": 0.0,
       "t_media": 22.6,
+      "t_max": 26.0,
+      "t_min": 19.5,
       "rh_media": 60.6,
       "vento_max": 23.2
     },
@@ -69,6 +424,8 @@
       "data": "2026-08-14",
       "pioggia_mm": 0.0,
       "t_media": 21.8,
+      "t_max": 25.8,
+      "t_min": 18.5,
       "rh_media": 64.7,
       "vento_max": 31.0
     },
@@ -76,6 +433,8 @@
       "data": "2026-08-15",
       "pioggia_mm": 0.0,
       "t_media": 21.7,
+      "t_max": 26.0,
+      "t_min": 17.8,
       "rh_media": 63.8,
       "vento_max": 20.3
     },
@@ -83,6 +442,8 @@
       "data": "2026-08-16",
       "pioggia_mm": 55.8,
       "t_media": 19.5,
+      "t_max": 27.0,
+      "t_min": 13.2,
       "rh_media": 69.4,
       "vento_max": 38.0
     },
@@ -90,6 +451,8 @@
       "data": "2026-08-17",
       "pioggia_mm": 0.2,
       "t_media": 18.5,
+      "t_max": 22.2,
+      "t_min": 14.0,
       "rh_media": 62.3,
       "vento_max": 22.5
     },
@@ -97,6 +460,8 @@
       "data": "2026-08-18",
       "pioggia_mm": 0.0,
       "t_media": 20.9,
+      "t_max": 24.5,
+      "t_min": 17.3,
       "rh_media": 46.3,
       "vento_max": 21.8
     },
@@ -104,6 +469,8 @@
       "data": "2026-08-19",
       "pioggia_mm": 0.0,
       "t_media": 20.5,
+      "t_max": 23.2,
+      "t_min": 17.9,
       "rh_media": 62.9,
       "vento_max": 20.5
     }
