@@ -77,6 +77,8 @@ class AnalizzatoreSiccitaPorcini:
         n = len(serie)
         giorno_oggi = serie[-1]
         indice_ev, pioggia_ev = None, 0.0
+        
+        # Cerca l'evento di pioggia
         for i in range(n - 1, 2, -1):
             c3 = sum(serie[k]["pioggia_mm"] for k in range(i - 2, i + 1))
             if c3 >= self.soglia_evento:
@@ -89,10 +91,10 @@ class AnalizzatoreSiccitaPorcini:
         giorni_da_ev = (n - 1) - indice_ev
         p_pre_30 = sum(serie[k]["pioggia_mm"] for k in range(max(0, indice_ev - 32), max(0, indice_ev - 2)))
         
-        if p_pre_30 >= 100.0: ritardo, soglia, smorz = 0, 40.0, 1.00
-        elif 60.0 <= p_pre_30 < 100.0: ritardo, soglia, smorz = 2, 45.0, 0.95
-        elif 30.0 <= p_pre_30 < 60.0: ritardo, soglia, smorz = 4, 55.0, 0.85
-        else: ritardo, soglia, smorz = 6, 65.0, 0.70
+        # Nuove tolleranze ammorbidite per piogge intense
+        if p_pre_30 >= 60.0: ritardo, soglia, smorz = 0, 35.0, 1.00
+        elif 25.0 <= p_pre_30 < 60.0: ritardo, soglia, smorz = 3, 40.0, 0.90
+        else: ritardo, soglia, smorz = 5, 50.0, 0.80
 
         giorni_favonio = 0
         for k in range(indice_ev + 1, n):
@@ -140,7 +142,8 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         else:
             t_max_eff, t_min_eff, rh_eff = t_max_b - 2.5, t_min_b - 1.0, min(100.0, diag["rh_media_attuale"] + 18.0)
 
-        f_R = 1.0 / (1.0 + math.exp(-0.09 * (diag["pioggia_evento_mm"] - diag["soglia_efficace_richiesta"])))
+        # Pioggia più responsiva (-0.12)
+        f_R = 1.0 / (1.0 + math.exp(-0.12 * (diag["pioggia_evento_mm"] - diag["soglia_efficace_richiesta"])))
         picco_eff = z["giorni_base"] + diag["ritardo_siccita_applicato"]
         f_L = math.exp(- ((diag["giorni_da_evento"] - picco_eff) ** 2) / (2 * (2.2 ** 2)))
         
@@ -155,7 +158,11 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         is_favonio = (vento > 20 and diag["rh_media_attuale"] < 60 and diag["pioggia_oggi"] < 1.0)
         phi_vento = max(0.1, 1.0 - 0.04 * (vento - 20)) if is_favonio else 1.0
 
-        indice = 100.0 * (f_R * (f_T_media * f_T_freddo) * f_L * f_H) * phi_vento * diag["fattore_smorzamento_resa"]
+        # Calcolo dell'INDICE PIENO (senza il ritardo temporale)
+        indice_pieno = 100.0 * (f_R * (f_T_media * f_T_freddo) * 1.0 * f_H) * phi_vento * diag["fattore_smorzamento_resa"]
+        
+        # Indice di OGGI (abbattuto dal ritardo temporale f_L)
+        indice = indice_pieno * f_L
         
         giorni_mancanti = picco_eff - diag["giorni_da_evento"]
         
@@ -167,6 +174,7 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         res.append({
             "zona": z["nome"],
             "indice_buttata": round(indice, 1),
+            "indice_picco": round(indice_pieno, 1),  # <-- AGGIUNTA FONDAMENTALE PER LA WEB APP
             "t_min_stimata": round(t_min_eff, 1),
             "t_max_stimata": round(t_max_eff, 1),
             "giorni_mancanti_al_picco": giorni_mancanti,
@@ -175,7 +183,7 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
     return res
 
 def main():
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Connessione ARPA (Solo dati certi passati)...")
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Connessione ARPA...")
     sensori = get_sensor_ids_for_station(ID_STAZIONE)
     df_orari = download_weather_history(sensori, days=45)
     serie_storica = aggregate_daily(df_orari)
