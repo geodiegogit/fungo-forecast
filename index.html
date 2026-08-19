@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Previsioni Funghi</title>
+    
+    <!-- PWA settings -->
+    <meta name="theme-color" content="#2E7D32">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2855/2855013.png">
+    
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --primary: #2E7D32;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-light: #666666;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --danger: #F44336;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding-bottom: 40px;
+        }
+
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 20px 15px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .update-time {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .container {
+            padding: 15px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--primary);
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+
+        /* Semaforo Zone */
+        .zona-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .zona-item:last-child {
+            border-bottom: none;
+        }
+        .zona-info h3 {
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .zona-stato {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+        
+        .progress-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Meteo Summary */
+        .meteo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .meteo-box {
+            background: #f8faf9;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        .meteo-box .valore {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .meteo-box .label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+        }
+
+        /* Chart container */
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        .loader {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🍄 Previsioni Porcini</h1>
+        <div class="update-time" id="last-update">Aggiornamento dati...</div>
+    </header>
+
+    <div class="container" id="app-content" style="display: none;">
+        
+        <!-- Diagnosi Siccità -->
+        <div class="card">
+            <h2 class="section-title">Stato Terreno & Siccità</h2>
+            <div id="siccita-text" style="font-size: 0.9rem; line-height: 1.4;">
+                Caricamento...
+            </div>
+        </div>
+
+        <!-- Semaforo Zone -->
+        <div class="card">
+            <h2 class="section-title">Indice di Buttata per Zona</h2>
+            <div id="zone-container">
+                <!-- Generato via JS -->
+            </div>
+        </div>
+
+        <!-- Meteo Attuale Stazione -->
+        <div class="card">
+            <h2 class="section-title">Meteo Stazione (Rescascia 1285m)</h2>
+            <div class="meteo-grid">
+                <div class="meteo-box">
+                    <div class="valore" id="m-tmax">--</div>
+                    <div class="label">T. Max Ieri</div>
+                </div>
+                <div class="meteo-box">
+                    <div class="valore" id="m-tmin">--</div>
+                    <div class="label">T. Min Ieri</div>
+                </div>
+                <div class="meteo-box">
+                    <div class="valore" id="m-pioggia">--</div>
+                    <div class="label">Pioggia Oggi</div>
+                </div>
+                <div class="meteo-box">
+                    <div class="valore" id="m-vento">--</div>
+                    <div class="label">Raffica Vento</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grafico Storico -->
+        <div class="card">
+            <h2 class="section-title">Storico Ultimi 30 Giorni</h2>
+            <div class="chart-container">
+                <canvas id="meteoChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+    
+    <div class="loader" id="loader">
+        <h2>Caricamento dati in corso...</h2>
+        <p>Connessione al server...</p>
+    </div>
+
+    <script>
+        // SOSTITUISCI QUI CON IL TUO NOME UTENTE GITHUB E NOME REPOSITORY
+        const GITHUB_USERNAME = "geodiegogit"; 
+        const REPO_NAME = "fungo-forecast"; 
+        
+        const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main/data/previsioni.json`;
+
+        async function initApp() {
+            try {
+                const response = await fetch(DATA_URL);
+                if (!response.ok) throw new Error("Errore nel caricamento dei dati JSON");
+                const data = await response.json();
+                
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('app-content').style.display = 'block';
+                
+                renderUI(data);
+            } catch (error) {
+                document.getElementById('loader').innerHTML = `<h3>Errore di connessione</h3><p>${error.message}</p><p>Verifica che il nome utente e il nome del repo siano corretti nel codice Javascript.</p>`;
+            }
+        }
+
+        function getColor(indice) {
+            if (indice >= 70) return "var(--success)";
+            if (indice >= 40) return "var(--warning)";
+            return "var(--danger)";
+        }
+
+        function renderUI(data) {
+            // Header
+            document.getElementById('last-update').innerText = "Ultimo agg: " + data.ultimo_aggiornamento;
+            
+            // Siccita
+            const diag = data.diagnosi_meteo;
+            const siccitaHtml = `
+                <strong>Condizione:</strong> ${diag.evento_rilevato ? 'Pioggia Rilevata' : diag.stato}<br>
+                <strong>Siccità Pregressa:</strong> ${diag.livello_siccita || 'N/D'}<br>
+                <strong>Giorni da ultimo shock:</strong> ${diag.giorni_da_evento !== undefined ? diag.giorni_da_evento + ' gg' : 'N/D'}<br>
+                <strong>Danni da Favonio:</strong> ${diag.giorni_favonio_subiti || 0} gg registrati
+            `;
+            document.getElementById('siccita-text').innerHTML = siccitaHtml;
+
+            // Zone
+            const zoneContainer = document.getElementById('zone-container');
+            zoneContainer.innerHTML = '';
+            
+            data.zone.forEach(z => {
+                const color = getColor(z.indice_buttata);
+                const html = `
+                    <div class="zona-item">
+                        <div class="zona-info">
+                            <h3>${z.zona}</h3>
+                            <div class="zona-stato">${z.stato}</div>
+                            <div class="zona-stato" style="font-size:0.75rem">T. Stimata: ${z.t_min_stimata}°C / ${z.t_max_stimata}°C | Umidità: ${z.umidita_stimata}%</div>
+                        </div>
+                        <div class="progress-circle" style="background-color: ${color}">
+                            ${z.indice_buttata}%
+                        </div>
+                    </div>
+                `;
+                zoneContainer.innerHTML += html;
+            });
+
+            // Meteo Stazione
+            if(diag.t_max_attuale) {
+                document.getElementById('m-tmax').innerText = diag.t_max_attuale + "°C";
+                document.getElementById('m-tmin').innerText = diag.t_min_attuale + "°C";
+                document.getElementById('m-pioggia').innerText = (diag.pioggia_oggi || 0) + " mm";
+                document.getElementById('m-vento').innerText = diag.vento_max_attuale + " km/h";
+            }
+
+            // Grafico
+            if(data.storico_completo && data.storico_completo.length > 0) {
+                renderChart(data.storico_completo.slice(-30)); // Mostra ultimi 30 giorni
+            }
+        }
+
+        function renderChart(storico) {
+            const ctx = document.getElementById('meteoChart').getContext('2d');
+            
+            const labels = storico.map(d => d.data.substring(5)); // Mostra MM-DD
+            const pioggia = storico.map(d => d.pioggia_mm);
+            const tmax = storico.map(d => d.t_max);
+            const tmin = storico.map(d => d.t_min);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Pioggia (mm)',
+                            data: pioggia,
+                            backgroundColor: 'rgba(33, 150, 243, 0.7)',
+                            yAxisID: 'y',
+                            type: 'bar'
+                        },
+                        {
+                            label: 'T. Max (°C)',
+                            data: tmax,
+                            borderColor: '#F44336',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            yAxisID: 'y1',
+                            type: 'line',
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'T. Min (°C)',
+                            data: tmin,
+                            borderColor: '#2196F3',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            yAxisID: 'y1',
+                            type: 'line',
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { 
+                            type: 'linear', display: true, position: 'left',
+                            title: { display: true, text: 'mm' },
+                            suggestedMax: 50
+                        },
+                        y1: {
+                            type: 'linear', display: true, position: 'right',
+                            title: { display: true, text: '°C' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Avvia
+        window.onload = initApp;
+    </script>
+</body>
+</html>
