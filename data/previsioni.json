@@ -1,0 +1,111 @@
+{
+  "ultimo_aggiornamento": "2026-08-19 21:15:47",
+  "stazione": {
+    "id": "1545",
+    "nome": "San Siro Alpe Rescascia",
+    "quota_m": 1285
+  },
+  "diagnosi_meteo": {
+    "evento_rilevato": true,
+    "data_evento": "2026-08-18",
+    "pioggia_evento_mm": 56.0,
+    "giorni_da_evento": 1,
+    "pioggia_precedente_30gg": 67.2,
+    "livello_siccita": "Lieve",
+    "ritardo_siccita_applicato": 2,
+    "soglia_efficace_richiesta": 45.0,
+    "fattore_smorzamento_resa": 0.95,
+    "t_media_attuale": 20.5,
+    "rh_media_attuale": 62.9,
+    "vento_max_attuale": 20.5
+  },
+  "zone": [
+    {
+      "zona": "Betulle Sud-Est",
+      "indice_buttata": 0.0,
+      "temp_stimata": 22.9,
+      "umidita_stimata": 54.9,
+      "giorno_picco_calcolato": "+11 gg da pioggia",
+      "giorni_mancanti_al_picco": 10,
+      "stato": "In incubazione (picco tra 10 gg)"
+    },
+    {
+      "zona": "Betulle Nord-Est",
+      "indice_buttata": 0.0,
+      "temp_stimata": 21.2,
+      "umidita_stimata": 74.9,
+      "giorno_picco_calcolato": "+10 gg da pioggia",
+      "giorni_mancanti_al_picco": 9,
+      "stato": "In incubazione (picco tra 9 gg)"
+    },
+    {
+      "zona": "Faggeta Alta",
+      "indice_buttata": 0.0,
+      "temp_stimata": 21.3,
+      "umidita_stimata": 54.9,
+      "giorno_picco_calcolato": "+14 gg da pioggia",
+      "giorni_mancanti_al_picco": 13,
+      "stato": "In incubazione (picco tra 13 gg)"
+    },
+    {
+      "zona": "Pini & Retroverso Svizzera",
+      "indice_buttata": 0.0,
+      "temp_stimata": 18.2,
+      "umidita_stimata": 80.9,
+      "giorno_picco_calcolato": "+15 gg da pioggia",
+      "giorni_mancanti_al_picco": 14,
+      "stato": "In incubazione (picco tra 14 gg)"
+    }
+  ],
+  "storico_recente": [
+    {
+      "data": "2026-08-13",
+      "pioggia_mm": 0.0,
+      "t_media": 22.6,
+      "rh_media": 60.6,
+      "vento_max": 23.2
+    },
+    {
+      "data": "2026-08-14",
+      "pioggia_mm": 0.0,
+      "t_media": 21.8,
+      "rh_media": 64.7,
+      "vento_max": 31.0
+    },
+    {
+      "data": "2026-08-15",
+      "pioggia_mm": 0.0,
+      "t_media": 21.7,
+      "rh_media": 63.8,
+      "vento_max": 20.3
+    },
+    {
+      "data": "2026-08-16",
+      "pioggia_mm": 55.8,
+      "t_media": 19.5,
+      "rh_media": 69.4,
+      "vento_max": 38.0
+    },
+    {
+      "data": "2026-08-17",
+      "pioggia_mm": 0.2,
+      "t_media": 18.5,
+      "rh_media": 62.3,
+      "vento_max": 22.5
+    },
+    {
+      "data": "2026-08-18",
+      "pioggia_mm": 0.0,
+      "t_media": 20.9,
+      "rh_media": 46.3,
+      "vento_max": 21.8
+    },
+    {
+      "data": "2026-08-19",
+      "pioggia_mm": 0.0,
+      "t_media": 20.5,
+      "rh_media": 62.9,
+      "vento_max": 20.5
+    }
+  ]
+}
