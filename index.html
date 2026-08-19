@@ -318,10 +318,10 @@
                     if(pm === undefined || pm === null) pm = 99;
                     
                     let dist = (i - pm); 
-                    let currentMax = z.indice_buttata / Math.exp(- ((-pm)*(-pm))/(2*4.84));
-                    if(currentMax > 100) currentMax = 100;
                     
-                    let finalProj = z.indice_buttata > 0 ? currentMax * Math.exp(- (dist*dist)/(2 * 4.84)) : 0;
+// Leggiamo il vero potenziale calcolato da Python, senza dedurlo al contrario!
+                    let currentMax = z.indice_picco || 0; 
+                    let finalProj = currentMax > 0 ? currentMax * Math.exp(- (dist*dist)/(2 * 4.84)) : 0;
                     
                     // Arrotonda alla decina più vicina (0, 10, 20... 100)
                     let pRounded = Math.round(finalProj / 10) * 10;
