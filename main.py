@@ -14,7 +14,6 @@ ENDPOINT_METEO_DATA = "https://www.dati.lombardia.it/resource/647i-nhxk.json"
 ID_STAZIONE = "1545"  # San Siro Alpe Rescascia (1285 m)
 
 def get_sensor_ids_for_station(id_stazione: str) -> Dict[str, str]:
-    """Recupera gli ID dei sensori attivi per la stazione."""
     params = {
         "$where": f"idstazione = '{id_stazione}'",
         "$limit": 50
@@ -26,22 +25,14 @@ def get_sensor_ids_for_station(id_stazione: str) -> Dict[str, str]:
     mappa = {}
     for s in sensori:
         tipo = s.get("tipologia", "").lower()
-        idsensore = s.get("idsensore")
-        if "precipitazione" in tipo:
-            mappa["pioggia"] = idsensore
-        elif "temperatura" in tipo:
-            mappa["temperatura"] = idsensore
-        elif "umidit" in tipo:
-            mappa["umidita"] = idsensore
-        elif "vento" in tipo or "velocit" in tipo:
-            mappa["vento"] = idsensore
+        ids = s.get("idsensore")
+        if "precipitazione" in tipo: mappa["pioggia"] = ids
+        elif "temperatura" in tipo: mappa["temperatura"] = ids
+        elif "umidit" in tipo: mappa["umidita"] = ids
+        elif "vento" in tipo or "velocit" in tipo: mappa["vento"] = ids
     return mappa
 
 def download_weather_history(mappa_sensori: Dict[str, str], days: int = 45) -> pd.DataFrame:
-    """Scarica le misurazioni orarie degli ultimi N giorni."""
-    if not mappa_sensori:
-        raise ValueError("Nessun sensore individuato per la stazione.")
-
     start_date = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00")
     id_list = "','".join(mappa_sensori.values())
     
@@ -66,32 +57,35 @@ def download_weather_history(mappa_sensori: Dict[str, str], days: int = 45) -> p
     return df.pivot_table(index="data", columns="tipo", values="valore", aggfunc="mean").reset_index()
 
 def aggregate_daily(df_hourly: pd.DataFrame) -> List[Dict[str, Any]]:
-    """Aggrega le letture orarie in valori giornalieri."""
-    if df_hourly.empty:
-        return []
-
+    if df_hourly.empty: return []
     df_hourly["giorno"] = df_hourly["data"].dt.strftime("%Y-%m-%d")
+    
     agg_rules = {}
     if "pioggia" in df_hourly.columns: agg_rules["pioggia"] = "sum"
-    if "temperatura" in df_hourly.columns: agg_rules["temperatura"] = "mean"
     if "umidita" in df_hourly.columns: agg_rules["umidita"] = "mean"
     if "vento" in df_hourly.columns: agg_rules["vento"] = "max"
+    if "temperatura" in df_hourly.columns: agg_rules["temperatura"] = ["mean", "max", "min"]
 
-    df_daily = df_hourly.groupby("giorno").agg(agg_rules).reset_index()
+    df_daily = df_hourly.groupby("giorno").agg(agg_rules)
+    df_daily.columns = ['_'.join(col).strip() for col in df_daily.columns.values]
+    df_daily = df_daily.reset_index()
+
     serie = []
     for _, row in df_daily.iterrows():
-        vento_kmh = row.get("vento", 0.0) * 3.6 if pd.notna(row.get("vento")) else 10.0
+        vento_kmh = row.get("vento_max", 0.0) * 3.6 if pd.notna(row.get("vento_max")) else 10.0
         serie.append({
             "data": row["giorno"],
-            "pioggia_mm": round(float(row.get("pioggia", 0.0)), 1),
-            "t_media": round(float(row.get("temperatura", 15.0)), 1),
-            "rh_media": round(float(row.get("umidita", 70.0)), 1),
+            "pioggia_mm": round(float(row.get("pioggia_sum", 0.0)), 1),
+            "t_media": round(float(row.get("temperatura_mean", 15.0)), 1),
+            "t_max": round(float(row.get("temperatura_max", 15.0)), 1),
+            "t_min": round(float(row.get("temperatura_min", 15.0)), 1),
+            "rh_media": round(float(row.get("umidita_mean", 70.0)), 1),
             "vento_max": round(float(vento_kmh), 1)
         })
     return serie
 
 # ==========================================
-# 2. ANALISI SICCITA' PREGRESSA & RITARDO
+# 2. ANALISI SICCITA' E STORICO INCUBAZIONE
 # ==========================================
 class AnalizzatoreSiccitaPorcini:
     def __init__(self, soglia_evento: float = 35.0):
@@ -101,6 +95,7 @@ class AnalizzatoreSiccitaPorcini:
         n = len(serie)
         giorno_oggi = serie[-1]
 
+        # 1. Ricerca ultimo shock idrico
         indice_ev = None
         pioggia_ev = 0.0
         for i in range(n - 1, 2, -1):
@@ -113,44 +108,49 @@ class AnalizzatoreSiccitaPorcini:
         if indice_ev is None:
             return {
                 "evento_rilevato": False,
-                "stato": "Nessuna pioggia significativa recente",
-                "pioggia_30gg_totale": sum(d["pioggia_mm"] for d in serie[-30:]),
-                "t_media_attuale": giorno_oggi["t_media"],
-                "rh_media_attuale": giorno_oggi["rh_media"],
-                "vento_max_attuale": giorno_oggi["vento_max"]
+                "stato": "Nessuna pioggia significativa recente"
             }
 
         giorni_da_ev = (n - 1) - indice_ev
-        in_pre = max(0, indice_ev - 32)
-        fi_pre = max(0, indice_ev - 2)
-        p_pre_30 = sum(serie[k]["pioggia_mm"] for k in range(in_pre, fi_pre))
+        
+        # 2. Siccità pregressa
+        p_pre_30 = sum(serie[k]["pioggia_mm"] for k in range(max(0, indice_ev - 32), max(0, indice_ev - 2)))
+        
+        if p_pre_30 >= 100.0: ritardo, soglia, smorz = 0, 40.0, 1.00
+        elif 60.0 <= p_pre_30 < 100.0: ritardo, soglia, smorz = 2, 45.0, 0.95
+        elif 30.0 <= p_pre_30 < 60.0: ritardo, soglia, smorz = 4, 55.0, 0.85
+        else: ritardo, soglia, smorz = 6, 65.0, 0.70
 
-        if p_pre_30 >= 100.0:
-            livello, ritardo, soglia, smorz = "Idratato", 0, 40.0, 1.00
-        elif 60.0 <= p_pre_30 < 100.0:
-            livello, ritardo, soglia, smorz = "Lieve", 2, 45.0, 0.95
-        elif 30.0 <= p_pre_30 < 60.0:
-            livello, ritardo, soglia, smorz = "Moderata", 4, 55.0, 0.85
-        else:
-            livello, ritardo, soglia, smorz = "Severa (Terreno arido)", 6, 65.0, 0.70
+        # 3. NOVITA': Conta giorni di FAVONIO durante l'incubazione
+        # Favonio = Vento forte (>22 kmh) + Umidità bassa (<60%) + Niente pioggia
+        giorni_favonio = 0
+        for k in range(indice_ev + 1, n):
+            g = serie[k]
+            if g["vento_max"] > 22.0 and g["rh_media"] < 60.0 and g["pioggia_mm"] < 1.0:
+                giorni_favonio += 1
+        
+        # Ogni giorno di favonio abbatte la resa totale del 25%
+        danno_favonio = max(0.1, 1.0 - (giorni_favonio * 0.25))
 
         return {
             "evento_rilevato": True,
             "data_evento": serie[indice_ev]["data"],
             "pioggia_evento_mm": round(pioggia_ev, 1),
             "giorni_da_evento": giorni_da_ev,
-            "pioggia_precedente_30gg": round(p_pre_30, 1),
-            "livello_siccita": livello,
             "ritardo_siccita_applicato": ritardo,
             "soglia_efficace_richiesta": soglia,
-            "fattore_smorzamento_resa": smorz,
+            "fattore_smorzamento_resa": smorz * danno_favonio,
+            "giorni_favonio_subiti": giorni_favonio,
             "t_media_attuale": giorno_oggi["t_media"],
+            "t_max_attuale": giorno_oggi["t_max"],
+            "t_min_attuale": giorno_oggi["t_min"],
             "rh_media_attuale": giorno_oggi["rh_media"],
-            "vento_max_attuale": giorno_oggi["vento_max"]
+            "vento_max_attuale": giorno_oggi["vento_max"],
+            "pioggia_oggi": giorno_oggi["pioggia_mm"]
         }
 
 # ==========================================
-# 3. PREVISIONE PER LE 4 MICROZONE
+# 3. MODELLO MICROZONE AVANZATO (T_MIN / T_MAX)
 # ==========================================
 def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[Dict[str, Any]]:
     zone_cfg = [
@@ -160,61 +160,76 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         {"nome": "Pini & Retroverso Svizzera", "quota": 1450, "essenza": "pino", "esposizione": "OMBRA_SVIZZERA", "giorni_base": 13}
     ]
 
-    if not diag["evento_rilevato"]:
-        return [{
-            "zona": z["nome"],
-            "indice_buttata": 0.0,
-            "stato": "In attesa di pioggia",
-            "giorni_mancanti_al_picco": None
-        } for z in zone_cfg]
+    if not diag.get("evento_rilevato"):
+        return [{"zona": z["nome"], "indice_buttata": 0.0, "stato": "In attesa di pioggia"} for z in zone_cfg]
 
     res = []
-    delta_t = diag["giorni_da_evento"]
-    r_cum = diag["pioggia_evento_mm"]
-    soglia_req = diag["soglia_efficace_richiesta"]
-    ritardo = diag["ritardo_siccita_applicato"]
-    smorz = diag["fattore_smorzamento_resa"]
-
     for z in zone_cfg:
-        t_base = diag["t_media_attuale"] - 0.0065 * (z["quota"] - quota_stazione)
+        # Gradiente base (0.65°C / 100m)
+        gradiente = 0.0065 * (z["quota"] - quota_stazione)
+        t_min_base = diag["t_min_attuale"] - gradiente
+        t_max_base = diag["t_max_attuale"] - gradiente
+        
+        # Correzioni Microclima
         if z["esposizione"] == "SE":
-            t_eff = t_base + 1.2
-            rh_eff = max(0.0, diag["rh_media_attuale"] - 8.0)
-            v_eff = diag["vento_max_attuale"]
+            t_max_eff = t_max_base + 2.5 # Scalda molto di giorno
+            t_min_eff = t_min_base
+            rh_eff = max(0.0, diag["rh_media_attuale"] - 10.0)
         elif z["esposizione"] == "NE":
-            t_eff = t_base - 0.5
+            t_max_eff = t_max_base - 1.0 # Più fresco di giorno
+            t_min_eff = t_min_base
             rh_eff = min(100.0, diag["rh_media_attuale"] + 12.0)
-            v_eff = diag["vento_max_attuale"] * 0.8
-        else:
-            t_eff = t_base - 1.2
+        else: # OMBRA SVIZZERA
+            t_max_eff = t_max_base - 2.5
+            t_min_eff = t_min_base - 1.0 # Rischio freddo notturno maggiore
             rh_eff = min(100.0, diag["rh_media_attuale"] + 18.0)
-            v_eff = diag["vento_max_attuale"] * 0.45
 
-        # Formule
-        f_R = 1.0 / (1.0 + math.exp(-0.09 * (r_cum - soglia_req)))
-        picco_eff = z["giorni_base"] + ritardo
-        f_L = math.exp(- ((delta_t - picco_eff) ** 2) / (2 * (2.2 ** 2)))
+        # 1. Fattore Pioggia (Base sigmoide)
+        f_R = 1.0 / (1.0 + math.exp(-0.09 * (diag["pioggia_evento_mm"] - diag["soglia_efficace_richiesta"])))
+        
+        # 2. Fattore Finestra Temporale
+        picco_eff = z["giorni_base"] + diag["ritardo_siccita_applicato"]
+        f_L = math.exp(- ((diag["giorni_da_evento"] - picco_eff) ** 2) / (2 * (2.2 ** 2)))
+        
+        # 3. Fattore Temperature (Freddo notturno e Media)
         t_opt = 16.5 if z["essenza"] != "pino" else 14.5
-        f_T = math.exp(- ((t_eff - t_opt) ** 2) / (2 * (3.5 ** 2)))
-        f_H = 1.0 if rh_eff >= 85 else (0.0 if rh_eff < 40 else ((rh_eff - 40) / 45) ** 1.2)
-        phi_vento = 1.0 if v_eff <= 20 else max(0.1, 1.0 - 0.03 * (v_eff - 20))
-
-        indice = 100.0 * (f_R * f_T * f_L * f_H) * phi_vento * smorz
-        giorni_mancanti = picco_eff - delta_t
-
-        if indice > 65:
-            stato = "Buttata in corso"
-        elif giorni_mancanti > 0:
-            stato = f"In incubazione (picco tra {giorni_mancanti} gg)"
+        t_media_eff = (t_max_eff + t_min_eff) / 2
+        f_T_media = math.exp(- ((t_media_eff - t_opt) ** 2) / (2 * (3.5 ** 2)))
+        
+        # BLOCCO FREDDO: Se la notte scende sotto i 7°C, abbatte. Sotto i 3°C azzera.
+        if t_min_eff < 3.0:
+            f_T_freddo = 0.0
+        elif t_min_eff < 7.0:
+            f_T_freddo = (t_min_eff - 3.0) / 4.0
         else:
-            stato = "In esaurimento"
+            f_T_freddo = 1.0
+            
+        f_T = f_T_media * f_T_freddo
+
+        # 4. Fattore Umidità
+        f_H = 1.0 if rh_eff >= 85 else (0.0 if rh_eff < 40 else ((rh_eff - 40) / 45) ** 1.2)
+        
+        # 5. Penalità Vento (Applicata solo se secco e senza pioggia)
+        vento = diag["vento_max_attuale"]
+        is_favonio_oggi = (vento > 20 and diag["rh_media_attuale"] < 60 and diag["pioggia_oggi"] < 1.0)
+        phi_vento = max(0.1, 1.0 - 0.04 * (vento - 20)) if is_favonio_oggi else 1.0
+
+        # CALCOLO FINALE
+        indice = 100.0 * (f_R * f_T * f_L * f_H) * phi_vento * diag["fattore_smorzamento_resa"]
+        
+        giorni_mancanti = picco_eff - diag["giorni_da_evento"]
+        
+        if f_T_freddo == 0.0: stato = "Bloccato dal freddo notturno"
+        elif indice > 65: stato = "Buttata in corso"
+        elif giorni_mancanti > 0: stato = f"In incubazione (picco tra {giorni_mancanti} gg)"
+        else: stato = "In esaurimento"
 
         res.append({
             "zona": z["nome"],
             "indice_buttata": round(indice, 1),
-            "temp_stimata": round(t_eff, 1),
+            "t_min_stimata": round(t_min_eff, 1),
+            "t_max_stimata": round(t_max_eff, 1),
             "umidita_stimata": round(rh_eff, 1),
-            "giorno_picco_calcolato": f"+{picco_eff} gg da pioggia",
             "giorni_mancanti_al_picco": giorni_mancanti,
             "stato": stato
         })
@@ -224,36 +239,33 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
 # 4. ESECUZIONE PRINCIPALE
 # ==========================================
 def main():
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Connessione Open Data ARPA...")
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Connessione Open Data ARPA (Motore 2.0)...")
     
     sensori = get_sensor_ids_for_station(ID_STAZIONE)
     df_orari = download_weather_history(sensori, days=45)
     serie_storica = aggregate_daily(df_orari)
     
     if not serie_storica:
-        print("Attenzione: nessun dato restituito da ARPA. Genero un modello vuoto.")
-        serie_storica = []
-        diagnosi = {"evento_rilevato": False, "stato": "Dati non disponibili"}
-        previsioni = []
-    else:
-        analizzatore = AnalizzatoreSiccitaPorcini()
-        diagnosi = analizzatore.analizza(serie_storica)
-        previsioni = calcola_microzone(diagnosi)
+        print("Errore: nessun dato scaricato.")
+        return
+
+    analizzatore = AnalizzatoreSiccitaPorcini()
+    diagnosi = analizzatore.analizza(serie_storica)
+    previsioni = calcola_microzone(diagnosi)
 
     output = {
         "ultimo_aggiornamento": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "stazione": {"id": ID_STAZIONE, "nome": "San Siro Alpe Rescascia", "quota_m": 1285},
         "diagnosi_meteo": diagnosi,
         "zone": previsioni,
-        "storico_recente": serie_storica[-7:] if serie_storica else []
+        "storico_completo": serie_storica
     }
 
     os.makedirs("data", exist_ok=True)
-    percorso_file = os.path.join("data", "previsioni.json")
-    with open(percorso_file, "w", encoding="utf-8") as f:
+    with open("data/previsioni.json", "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
-    print(f"Completato! File generato con successo: {percorso_file}")
+    print("Completato! File generato con successo: data/previsioni.json")
 
 if __name__ == "__main__":
     main()
