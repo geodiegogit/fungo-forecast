@@ -49,8 +49,11 @@
         .cal-data { flex-grow: 1; text-align: right; color: var(--text-light); font-size: 0.85rem; padding-right: 5px;}
         .cal-diario { width: 25px; text-align: center; font-size: 1.1rem; }
         
-        .future-zones { display: flex; gap: 5px; justify-content: flex-end; }
-        .future-dot { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: white; font-weight: bold;}
+        /* Modifiche per la Griglia Futura */
+        .cal-header { font-size: 0.75rem; font-weight: bold; color: var(--text-light); border-bottom: 2px solid #ddd; padding-bottom: 5px;}
+        .future-zones { display: flex; gap: 4px; justify-content: flex-end; flex-grow: 1; }
+        .z-label { width: 38px; text-align: center; }
+        .future-dot { width: 38px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; border: 1px solid #e0e0e0;}
 
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
         .nav-btn { flex: 1; padding: 15px 0; text-align: center; background: none; border: none; font-size: 1rem; color: var(--text-light); font-weight: bold; }
@@ -99,8 +102,7 @@
         <div class="card">
             <h2 class="section-title">Proiezione (Prossimi 15 gg)</h2>
             <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">
-                Calcolo basato unicamente sull'ultimo evento di pioggia certa.<br>
-                Zone: 1=Betulle SE, 2=Betulle NE, 3=Faggi, 4=Pini.
+                Calcolo basato unicamente sull'ultimo evento di pioggia certa.
             </p>
             <div id="future-calendar"></div>
         </div>
@@ -120,7 +122,7 @@
 
     <script>
         // --- SOSTITUISCI CON I TUOI DATI ---
-        const GITHUB_USERNAME = "geodiegogit"; 
+        const GITHUB_USERNAME = "TUO-USERNAME"; 
         const REPO_NAME = "fungo-forecast"; 
         const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main/data/previsioni.json`;
 
@@ -187,10 +189,29 @@
             document.getElementById('btn-' + tab).classList.add('active');
         }
 
+        // Colori classici semaforo (per Dashboard)
         function getColor(indice) {
             if (indice >= 65) return "var(--success)";
             if (indice >= 30) return "var(--warning)";
             return "var(--danger)";
+        }
+
+        // Heatmap Termica (per il Calendario Futuro)
+        function getHeatmapColor(p) {
+            const colors = {
+                0:   {bg: '#ffffff', txt: '#cccccc', border: '#eeeeee'},
+                10:  {bg: '#fffde7', txt: '#777777', border: '#fff59d'}, // Giallino pallido
+                20:  {bg: '#fff59d', txt: '#333333', border: '#ffee58'}, // Giallo
+                30:  {bg: '#ffee58', txt: '#333333', border: '#fdd835'},
+                40:  {bg: '#ffca28', txt: '#333333', border: '#ffb300'}, // Ambra
+                50:  {bg: '#ffa726', txt: '#ffffff', border: '#fb8c00'}, // Arancione
+                60:  {bg: '#ff9800', txt: '#ffffff', border: '#f57c00'},
+                70:  {bg: '#f4511e', txt: '#ffffff', border: '#e64a19'}, // Arancione scuro
+                80:  {bg: '#e53935', txt: '#ffffff', border: '#d32f2f'}, // Rosso
+                90:  {bg: '#c62828', txt: '#ffffff', border: '#b71c1c'},
+                100: {bg: '#b71c1c', txt: '#ffffff', border: '#7f0000'}  // Rosso intenso
+            };
+            return colors[p] || colors[0];
         }
 
         function renderDashboard() {
@@ -266,8 +287,21 @@
             });
             document.getElementById('past-calendar').innerHTML = pastHtml;
 
-            // --- FUTURO (Curva Matematica Pura) ---
-            let futureHtml = '';
+            // --- FUTURO (Mappa di Calore) ---
+            // Intestazione Colonne (Legenda Zone)
+            let futureHtml = `
+                <div class="cal-row cal-header">
+                    <div class="cal-date">Data</div>
+                    <div class="cal-luna"></div>
+                    <div class="future-zones">
+                        <div class="z-label">B.SE</div>
+                        <div class="z-label">B.NE</div>
+                        <div class="z-label">FAG</div>
+                        <div class="z-label">PIN</div>
+                    </div>
+                </div>
+            `;
+            
             const oggi = new Date();
             
             for(let i=1; i<=15; i++) {
@@ -279,7 +313,7 @@
                 let luna = getFaseLunare(dateStr);
                 
                 let dots = '';
-                data.zone.forEach((z, idx) => {
+                data.zone.forEach((z) => {
                     let pm = z.giorni_mancanti_al_picco; 
                     if(pm === undefined || pm === null) pm = 99;
                     
@@ -288,14 +322,22 @@
                     if(currentMax > 100) currentMax = 100;
                     
                     let finalProj = z.indice_buttata > 0 ? currentMax * Math.exp(- (dist*dist)/(2 * 4.84)) : 0;
-                    dots += `<div class="future-dot" style="background-color: ${getColor(finalProj)}">${idx+1}</div>`;
+                    
+                    // Arrotonda alla decina più vicina (0, 10, 20... 100)
+                    let pRounded = Math.round(finalProj / 10) * 10;
+                    if(pRounded > 100) pRounded = 100;
+                    if(pRounded < 0) pRounded = 0;
+
+                    let c = getHeatmapColor(pRounded);
+                    let label = pRounded === 0 ? '-' : pRounded + '%';
+
+                    dots += `<div class="future-dot" style="background-color: ${c.bg}; color: ${c.txt}; border-color: ${c.border};">${label}</div>`;
                 });
 
                 futureHtml += `
                     <div class="cal-row">
                         <div class="cal-date">${dd}/${mm}</div>
                         <div class="cal-luna">${luna}</div>
-                        <div class="cal-data" style="text-align: left; margin-left: 10px;">Proiezione</div>
                         <div class="future-zones">${dots}</div>
                     </div>`;
             }
