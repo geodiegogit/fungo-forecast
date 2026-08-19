@@ -22,11 +22,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 70px; }
 
-        header {
-            background-color: var(--primary); color: white; padding: 15px;
-            text-align: center; position: sticky; top: 0; z-index: 100;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+        header { background-color: var(--primary); color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         header h1 { font-size: 1.3rem; }
         .update-time { font-size: 0.75rem; opacity: 0.8; margin-top: 3px; }
 
@@ -59,7 +55,6 @@
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
         .nav-btn { flex: 1; padding: 15px 0; text-align: center; background: none; border: none; font-size: 1rem; color: var(--text-light); font-weight: bold; }
         .nav-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
-
         .chart-container { position: relative; height: 200px; width: 100%; }
         .hidden { display: none; }
     </style>
@@ -102,9 +97,9 @@
     <!-- TAB 2: CALENDARIO -->
     <div class="container hidden" id="tab-calendario">
         <div class="card">
-            <h2 class="section-title">Previsioni Reali (Prossimi 15 gg)</h2>
+            <h2 class="section-title">Proiezione (Prossimi 15 gg)</h2>
             <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">
-                Dati meteo futuri integrati con Open-Meteo.<br>
+                Calcolo basato unicamente sull'ultimo evento di pioggia certa.<br>
                 Zone: 1=Betulle SE, 2=Betulle NE, 3=Faggi, 4=Pini.
             </p>
             <div id="future-calendar"></div>
@@ -112,7 +107,7 @@
 
         <div class="card">
             <h2 class="section-title">Storico (Ultimi 15 gg)</h2>
-            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">I funghi 🍄 indicano le date salvate nel tuo Diario.</p>
+            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">I funghi 🍄 indicano i tuoi ritrovamenti.</p>
             <div id="past-calendar"></div>
         </div>
     </div>
@@ -125,13 +120,12 @@
 
     <script>
         // --- SOSTITUISCI CON I TUOI DATI ---
-        const GITHUB_USERNAME = "geodiegogit"; 
+        const GITHUB_USERNAME = "TUO-USERNAME"; 
         const REPO_NAME = "fungo-forecast"; 
         const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main/data/previsioni.json`;
 
         let globalData = null;
 
-        // Fasi lunari accurate
         function getFaseLunare(dataStr) {
             const date = new Date(dataStr);
             const ciclo = 29.530588;
@@ -139,13 +133,13 @@
             const giorniTrasc = (date - lunaNuova) / 86400000;
             let fase = ((giorniTrasc % ciclo) + ciclo) % ciclo;
             
-            if (fase < 1.5 || fase > 28.5) return '🌑'; // Nuova
-            if (fase < 7) return '🌓'; // Crescente/Primo Quarto
-            if (fase < 13.5) return '🌔'; // Gibbosa Crescente
-            if (fase < 16) return '🌕'; // Piena
-            if (fase < 21) return '🌖'; // Gibbosa Calante
-            if (fase < 23.5) return '🌗'; // Ultimo Quarto
-            return '🌘'; // Calante
+            if (fase < 1.5 || fase > 28.5) return '🌑'; 
+            if (fase < 7) return '🌓'; 
+            if (fase < 13.5) return '🌔'; 
+            if (fase < 16) return '🌕'; 
+            if (fase < 21) return '🌖'; 
+            if (fase < 23.5) return '🌗'; 
+            return '🌘'; 
         }
 
         function getMeteoIcon(p, v, tmin) {
@@ -156,7 +150,6 @@
             return '☀️';
         }
 
-        // Gestione Diario (localStorage)
         function salvaRitrovamento(zona) {
             let diario = JSON.parse(localStorage.getItem('diario_funghi')) || {};
             let oggi = new Date().toISOString().split('T')[0];
@@ -166,7 +159,7 @@
                 diario[oggi].push(zona);
                 localStorage.setItem('diario_funghi', JSON.stringify(diario));
                 alert(`🍄 Ottimo! Ritrovamento in ${zona} salvato nel diario di oggi.`);
-                renderCalendars(); // Aggiorna il calendario per mostrare il fungo
+                renderCalendars(); 
             } else {
                 alert(`Hai già segnato un ritrovamento per ${zona} oggi!`);
             }
@@ -174,13 +167,13 @@
 
         async function initApp() {
             try {
-                const response = await fetch(DATA_URL + '?t=' + new Date().getTime()); // Evita cache
+                const response = await fetch(DATA_URL + '?t=' + new Date().getTime());
                 if (!response.ok) throw new Error("Errore HTTP");
                 globalData = await response.json();
                 renderDashboard();
                 renderCalendars();
             } catch (error) {
-                document.getElementById('siccita-text').innerHTML = "<b>Errore. Attendi l'aggiornamento notturno o verifica i dati.</b>";
+                document.getElementById('siccita-text').innerHTML = "<b>Errore. Attendi aggiornamento server.</b>";
             }
         }
 
@@ -200,33 +193,26 @@
             return "var(--danger)";
         }
 
-        function testoStato(indice) {
-            if (indice >= 65) return "Ottimo potenziale";
-            if (indice >= 30) return "Condizioni in sviluppo";
-            if (indice > 0) return "Attività debole";
-            return "Nessuna attività";
-        }
-
         function renderDashboard() {
             const data = globalData;
             document.getElementById('last-update').innerText = "Aggiornato: " + data.ultimo_aggiornamento.substring(0,10);
             
             const diag = data.diagnosi_meteo;
             document.getElementById('siccita-text').innerHTML = `
-                <strong>Stato Generale:</strong> ${diag.evento_rilevato ? 'Ciclo in corso' : 'In attesa'}<br>
-                <strong>Ultimo grande shock idrico:</strong> ${diag.giorni_da_evento !== undefined ? diag.giorni_da_evento + ' gg fa' : 'N/D'}<br>
-                <strong>Siccità Precedente:</strong> ${diag.ritardo_siccita_applicato > 0 ? '+' + diag.ritardo_siccita_applicato + ' gg di ritardo' : 'Assente'}<br>
+                <strong>Stato Generale:</strong> ${diag.evento_rilevato ? 'Ciclo idrico in corso' : 'In attesa'}<br>
+                <strong>Ultima pioggia:</strong> ${diag.giorni_da_evento !== undefined ? diag.giorni_da_evento + ' gg fa' : 'N/D'}<br>
+                <strong>Ritardo Siccità:</strong> ${diag.ritardo_siccita_applicato > 0 ? '+' + diag.ritardo_siccita_applicato + ' gg' : 'Nessuno'}<br>
             `;
 
             const zc = document.getElementById('zone-container');
             zc.innerHTML = '';
             data.zone.forEach(z => {
-                let ind = z.indice || 0;
+                let ind = z.indice_buttata || 0;
                 zc.innerHTML += `
                     <div class="zona-item">
                         <div class="zona-info">
                             <h3>${z.zona}</h3>
-                            <div class="zona-stato">${testoStato(ind)} (T: ${z.t_min_stimata}°/${z.t_max_stimata}°)</div>
+                            <div class="zona-stato">${z.stato} (T: ${z.t_min_stimata}°/${z.t_max_stimata}°)</div>
                             <div class="btn-trovati" onclick="salvaRitrovamento('${z.zona}')">🍄 Trovati!</div>
                         </div>
                         <div class="progress-circle" style="background-color: ${getColor(ind)}">
@@ -261,7 +247,7 @@
             const data = globalData;
             let diario = JSON.parse(localStorage.getItem('diario_funghi')) || {};
             
-            // --- PASSATO (Ultimi 15 gg) ---
+            // --- PASSATO ---
             const past = data.storico_completo.slice(-15).reverse();
             let pastHtml = '';
             past.forEach(d => {
@@ -280,33 +266,39 @@
             });
             document.getElementById('past-calendar').innerHTML = pastHtml;
 
-            // --- FUTURO (Proiezione 15 gg) ---
+            // --- FUTURO (Curva Matematica Pura) ---
             let futureHtml = '';
-            if(data.calendario_futuro && data.calendario_futuro.length > 0) {
-                data.calendario_futuro.forEach(f => {
-                    let d = f.meteo;
-                    let icon = getMeteoIcon(d.pioggia_mm, d.vento_max, d.t_min);
-                    let luna = getFaseLunare(d.data);
-                    
-                    let dots = '';
-                    f.zone.forEach((z, idx) => {
-                        let ind = z.indice || 0;
-                        dots += `<div class="future-dot" style="background-color: ${getColor(ind)}">${idx+1}</div>`;
-                    });
-
-                    futureHtml += `
-                        <div class="cal-row">
-                            <div class="cal-date">${d.data.substring(5, 10).replace('-', '/')}</div>
-                            <div class="cal-luna">${luna}</div>
-                            <div class="cal-icon">${icon}</div>
-                            <div class="cal-data">${d.pioggia_mm}mm</div>
-                            <div class="future-zones">${dots}</div>
-                        </div>`;
-                });
-            } else {
-                futureHtml = "<p>Dati futuri non ancora disponibili. Attendi l'aggiornamento notturno di GitHub Actions.</p>";
-            }
+            const oggi = new Date();
             
+            for(let i=1; i<=15; i++) {
+                let futureDate = new Date();
+                futureDate.setDate(oggi.getDate() + i);
+                let dateStr = futureDate.toISOString().split('T')[0];
+                let dd = String(futureDate.getDate()).padStart(2, '0');
+                let mm = String(futureDate.getMonth() + 1).padStart(2, '0');
+                let luna = getFaseLunare(dateStr);
+                
+                let dots = '';
+                data.zone.forEach((z, idx) => {
+                    let pm = z.giorni_mancanti_al_picco; 
+                    if(pm === undefined || pm === null) pm = 99;
+                    
+                    let dist = (i - pm); 
+                    let currentMax = z.indice_buttata / Math.exp(- ((-pm)*(-pm))/(2*4.84));
+                    if(currentMax > 100) currentMax = 100;
+                    
+                    let finalProj = z.indice_buttata > 0 ? currentMax * Math.exp(- (dist*dist)/(2 * 4.84)) : 0;
+                    dots += `<div class="future-dot" style="background-color: ${getColor(finalProj)}">${idx+1}</div>`;
+                });
+
+                futureHtml += `
+                    <div class="cal-row">
+                        <div class="cal-date">${dd}/${mm}</div>
+                        <div class="cal-luna">${luna}</div>
+                        <div class="cal-data" style="text-align: left; margin-left: 10px;">Proiezione</div>
+                        <div class="future-zones">${dots}</div>
+                    </div>`;
+            }
             document.getElementById('future-calendar').innerHTML = futureHtml;
         }
 
