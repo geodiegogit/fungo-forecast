@@ -16,7 +16,7 @@ ID_STAZIONE = "1545"  # San Siro Alpe Rescascia (1285 m)
 def get_sensor_ids_for_station(id_stazione: str) -> Dict[str, str]:
     """Recupera gli ID dei sensori attivi per la stazione."""
     params = {
-        "$where": f"idstazione = '{id_stazione}' AND idstatosensore = 'A'",
+        "$where": f"idstazione = '{id_stazione}'",
         "$limit": 50
     }
     response = requests.get(ENDPOINT_SENSORS_ANAGRAFICA, params=params, timeout=20)
