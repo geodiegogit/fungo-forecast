@@ -1,4 +1,4 @@
-name: Aggiornamento Previsioni Funghi San Siro
+name: Aggiornamento Previsioni Funghi
 
 on:
   schedule:
