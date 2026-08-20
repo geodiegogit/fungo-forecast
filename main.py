@@ -83,30 +83,50 @@ class AnalizzatoreSiccitaPorcini:
     def analizza(self, serie: List[Dict[str, Any]]) -> Dict[str, Any]:
         n = len(serie)
         giorno_ieri = serie[-1]
-        indice_ev = None
-        pioggia_ev = 0.0
-        data_evento_reale = None
         
-        # Cerca l'evento di pioggia scorrendo all'indietro
-        for i in range(n - 1, 2, -1):
-            # Somma 3 giorni (i-2, i-1, i)
+        eventi_trovati = []
+        
+        # 1. Cerca TUTTE le perturbazioni negli ultimi 35 giorni
+        for i in range(max(2, n - 35), n):
             c3 = sum(serie[k]["pioggia_mm"] for k in range(i - 2, i + 1))
-            
             if c3 >= self.soglia_evento:
-                # Se la somma supera i 35mm, troviamo qual è il giorno in cui ha piovuto di più
                 giorni_finestra = [serie[k] for k in range(i - 2, i + 1)]
-                giorno_max_pioggia = max(giorni_finestra, key=lambda x: x["pioggia_mm"])
+                giorno_max = max(giorni_finestra, key=lambda x: x["pioggia_mm"])
+                idx = serie.index(giorno_max)
                 
-                # Salviamo l'indice reale del giorno di massima pioggia all'interno del dataset
-                indice_ev = serie.index(giorno_max_pioggia)
-                pioggia_ev = c3 # Manteniamo la somma totale della perturbazione
-                data_evento_reale = giorno_max_pioggia["data"]
-                break
+                # Registra l'evento solo se è distanziato dal precedente (almeno 5 giorni di stacco)
+                if not eventi_trovati or (idx - eventi_trovati[-1]["indice"]) > 4:
+                    eventi_trovati.append({
+                        "indice": idx,
+                        "pioggia": c3,
+                        "data": giorno_max["data"]
+                    })
 
-        if indice_ev is None:
+        if not eventi_trovati:
             return {"evento_rilevato": False, "stato": "Nessuna pioggia significativa recente"}
 
+        # 2. Seleziona l'evento "DOMINANTE" (Quello che sta spingendo i funghi OGGI)
+        evento_dominante = None
+        max_vitalita = -1.0
+        
+        for ev in eventi_trovati:
+            gg_da_ev = (n - 1) - ev["indice"]
+            # La vitalità dell'evento è massima intorno all'11° giorno, poi decade
+            vitalita = math.exp(- ((gg_da_ev - 11) ** 2) / (2 * (4.0 ** 2)))
+            if vitalita > max_vitalita:
+                max_vitalita = vitalita
+                evento_dominante = ev
+                
+        # Se tutti gli eventi sono vecchissimi (>25 gg), prendiamo il più recente 
+        # (vitalità prossima allo zero) per indicare una nuova incubazione lontana
+        if max_vitalita < 0.01:
+            evento_dominante = eventi_trovati[-1]
+
+        indice_ev = evento_dominante["indice"]
+        pioggia_ev = evento_dominante["pioggia"]
+        data_evento_reale = evento_dominante["data"]
         giorni_da_ev = (n - 1) - indice_ev
+        
         p_pre_30 = sum(serie[k]["pioggia_mm"] for k in range(max(0, indice_ev - 32), max(0, indice_ev - 2)))
         
         if p_pre_30 >= 60.0: ritardo, soglia, smorz = 0, 35.0, 1.00
