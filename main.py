@@ -86,74 +86,66 @@ class AnalizzatoreSiccitaPorcini:
         
         eventi_trovati = []
         
-        # 1. Cerca TUTTE le perturbazioni negli ultimi 35 giorni
-        for i in range(max(2, n - 35), n):
+        # Scansiona tutto il mese in ordine cronologico per trovare TUTTE le ondate
+        i = 2
+        while i < n:
             c3 = sum(serie[k]["pioggia_mm"] for k in range(i - 2, i + 1))
             if c3 >= self.soglia_evento:
                 giorni_finestra = [serie[k] for k in range(i - 2, i + 1)]
                 giorno_max = max(giorni_finestra, key=lambda x: x["pioggia_mm"])
                 idx = serie.index(giorno_max)
                 
-                # Registra l'evento solo se è distanziato dal precedente (almeno 5 giorni di stacco)
-                if not eventi_trovati or (idx - eventi_trovati[-1]["indice"]) > 4:
+                # Registra l'onda se dista almeno 4 giorni dalla precedente
+                if not eventi_trovati or (idx - eventi_trovati[-1]["indice"]) >= 4:
+                    p_pre_30 = sum(serie[k]["pioggia_mm"] for k in range(max(0, idx - 32), max(0, idx - 2)))
+                    if p_pre_30 >= 60.0: ritardo, soglia, smorz = 0, 35.0, 1.00
+                    elif 25.0 <= p_pre_30 < 60.0: ritardo, soglia, smorz = 3, 40.0, 0.90
+                    else: ritardo, soglia, smorz = 5, 50.0, 0.80
+
+                    giorni_da_ev = (n - 1) - idx
+                    
+                    giorni_favonio = sum(1 for k in range(idx + 1, n) 
+                                         if serie[k]["vento_max"] > 22.0 
+                                         and serie[k]["rh_media"] < 60.0 
+                                         and serie[k]["pioggia_mm"] < 1.0)
+                    danno_favonio = max(0.1, 1.0 - (giorni_favonio * 0.25))
+                    
                     eventi_trovati.append({
                         "indice": idx,
+                        "data": giorno_max["data"],
                         "pioggia": c3,
-                        "data": giorno_max["data"]
+                        "giorni_da_evento": giorni_da_ev,
+                        "ritardo": ritardo,
+                        "soglia": soglia,
+                        "smorzamento": smorz * danno_favonio
                     })
+                i += 3 
+            else:
+                i += 1
 
-        if not eventi_trovati:
-            return {"evento_rilevato": False, "stato": "Nessuna pioggia significativa recente"}
+        # Rimuove ondate troppo vecchie (esaurite da oltre 40 gg)
+        eventi_trovati = [ev for ev in eventi_trovati if ev["giorni_da_evento"] <= 40]
 
-        # 2. Seleziona l'evento "DOMINANTE" (Quello che sta spingendo i funghi OGGI)
-        evento_dominante = None
-        max_vitalita = -1.0
-        
-        for ev in eventi_trovati:
-            gg_da_ev = (n - 1) - ev["indice"]
-            # La vitalità dell'evento è massima intorno all'11° giorno, poi decade
-            vitalita = math.exp(- ((gg_da_ev - 11) ** 2) / (2 * (4.0 ** 2)))
-            if vitalita > max_vitalita:
-                max_vitalita = vitalita
-                evento_dominante = ev
-                
-        # Se tutti gli eventi sono vecchissimi (>25 gg), prendiamo il più recente 
-        # (vitalità prossima allo zero) per indicare una nuova incubazione lontana
-        if max_vitalita < 0.01:
-            evento_dominante = eventi_trovati[-1]
-
-        indice_ev = evento_dominante["indice"]
-        pioggia_ev = evento_dominante["pioggia"]
-        data_evento_reale = evento_dominante["data"]
-        giorni_da_ev = (n - 1) - indice_ev
-        
-        p_pre_30 = sum(serie[k]["pioggia_mm"] for k in range(max(0, indice_ev - 32), max(0, indice_ev - 2)))
-        
-        if p_pre_30 >= 60.0: ritardo, soglia, smorz = 0, 35.0, 1.00
-        elif 25.0 <= p_pre_30 < 60.0: ritardo, soglia, smorz = 3, 40.0, 0.90
-        else: ritardo, soglia, smorz = 5, 50.0, 0.80
-
-        giorni_favonio = 0
-        for k in range(indice_ev + 1, n):
-            g = serie[k]
-            if g["vento_max"] > 22.0 and g["rh_media"] < 60.0 and g["pioggia_mm"] < 1.0:
-                giorni_favonio += 1
-        danno_favonio = max(0.1, 1.0 - (giorni_favonio * 0.25))
-
-        return {
-            "evento_rilevato": True,
-            "data_evento": data_evento_reale,
-            "pioggia_evento_mm": round(pioggia_ev, 1),
-            "giorni_da_evento": giorni_da_ev,
-            "ritardo_siccita_applicato": ritardo,
-            "soglia_efficace_richiesta": soglia,
-            "fattore_smorzamento_resa": smorz * danno_favonio,
+        diag = {
             "t_max_attuale": giorno_ieri["t_max"],
             "t_min_attuale": giorno_ieri["t_min"],
             "rh_media_attuale": giorno_ieri["rh_media"],
             "vento_max_attuale": giorno_ieri["vento_max"],
-            "pioggia_oggi": giorno_ieri["pioggia_mm"] 
+            "pioggia_oggi": giorno_ieri["pioggia_mm"], 
+            "eventi": eventi_trovati
         }
+        
+        if not eventi_trovati:
+            diag.update({"evento_rilevato": False, "stato": "Nessuna pioggia rilevante"})
+        else:
+            ev_recente = eventi_trovati[-1]
+            diag.update({
+                "evento_rilevato": True,
+                "data_evento": ev_recente["data"],
+                "giorni_da_evento": ev_recente["giorni_da_evento"],
+                "ritardo_siccita_applicato": ev_recente["ritardo"]
+            })
+        return diag
 
 def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[Dict[str, Any]]:
     zone_cfg = [
@@ -164,7 +156,7 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
     ]
 
     if not diag.get("evento_rilevato"):
-        return [{"zona": z["nome"], "indice_buttata": 0.0, "stato": "In attesa di pioggia", "giorni_mancanti_al_picco": None} for z in zone_cfg]
+        return [{"zona": z["nome"], "indice_buttata": 0.0, "stato": "In attesa", "giorni_mancanti_al_picco": None, "onde": []} for z in zone_cfg]
 
     res = []
     for z in zone_cfg:
@@ -183,38 +175,53 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         else:
             t_max_eff, t_min_eff, rh_eff = t_max_b, t_min_b, diag["rh_media_attuale"]
 
-        f_R = 1.0 / (1.0 + math.exp(-0.12 * (diag["pioggia_evento_mm"] - diag["soglia_efficace_richiesta"])))
-        picco_eff = z["giorni_base"] + diag["ritardo_siccita_applicato"]
-        f_L = math.exp(- ((diag["giorni_da_evento"] - picco_eff) ** 2) / (2 * (2.2 ** 2)))
-        
         t_opt = 16.5 if z["essenza"] not in ["pino", "faggio"] else 14.5
         t_media_eff = (t_max_eff + t_min_eff) / 2
         f_T_media = math.exp(- ((t_media_eff - t_opt) ** 2) / (2 * (3.5 ** 2)))
-        
         f_T_freddo = 0.0 if t_min_eff < 3.0 else ((t_min_eff - 3.0) / 4.0 if t_min_eff < 7.0 else 1.0)
         f_H = 1.0 if rh_eff >= 85 else (0.0 if rh_eff < 40 else ((rh_eff - 40) / 45) ** 1.2)
         
         vento = diag["vento_max_attuale"]
         is_favonio = (vento > 20 and diag["rh_media_attuale"] < 60 and diag["pioggia_oggi"] < 1.0)
         phi_vento = max(0.1, 1.0 - 0.04 * (vento - 20)) if is_favonio else 1.0
+        
+        indice_totale = 0.0
+        onde = []
+        
+        # Somma le probabilità di TUTTE le ondate (Flush multipli)
+        for ev in diag["eventi"]:
+            f_R = 1.0 / (1.0 + math.exp(-0.12 * (ev["pioggia"] - ev["soglia"])))
+            picco_eff = z["giorni_base"] + ev["ritardo"]
+            f_L = math.exp(- ((ev["giorni_da_evento"] - picco_eff) ** 2) / (2 * (2.2 ** 2)))
+            
+            ind_pieno = 100.0 * (f_R * (f_T_media * f_T_freddo) * 1.0 * f_H) * phi_vento * ev["smorzamento"]
+            ind_oggi = ind_pieno * f_L
+            
+            indice_totale += ind_oggi
+            onde.append({
+                "giorni_mancanti_da_ieri": round(picco_eff - ev["giorni_da_evento"], 1),
+                "indice_picco": round(ind_pieno, 1)
+            })
 
-        indice_pieno = 100.0 * (f_R * (f_T_media * f_T_freddo) * 1.0 * f_H) * phi_vento * diag["fattore_smorzamento_resa"]
-        indice = indice_pieno * f_L
-        giorni_mancanti = picco_eff - diag["giorni_da_evento"]
+        indice_totale = min(100.0, indice_totale)
+        
+        # Estrae i giorni mancanti al PROSSIMO picco
+        futuri = [onda["giorni_mancanti_da_ieri"] for onda in onde if onda["giorni_mancanti_da_ieri"] > 0]
+        giorni_mancanti = min(futuri) if futuri else (min([o["giorni_mancanti_da_ieri"] for o in onde]) if onde else 0)
         
         if f_T_freddo == 0.0: stato = "Blocco da freddo notturno"
-        elif indice > 65: stato = "Buttata in corso"
-        elif giorni_mancanti > 0: stato = f"Incubazione (picco in {giorni_mancanti} gg)"
+        elif indice_totale > 65: stato = "Buttata in corso (Onde multiple)" if len(onde)>1 else "Buttata in corso"
+        elif giorni_mancanti > 0: stato = f"Incubazione (prossimo picco in {giorni_mancanti} gg)"
         else: stato = "In esaurimento"
 
         res.append({
             "zona": z["nome"],
-            "indice_buttata": round(indice, 1),
-            "indice_picco": round(indice_pieno, 1),
+            "indice_buttata": round(indice_totale, 1),
             "t_min_stimata": round(t_min_eff, 1),
             "t_max_stimata": round(t_max_eff, 1),
             "giorni_mancanti_al_picco": giorni_mancanti,
-            "stato": stato
+            "stato": stato,
+            "onde": onde
         })
     return res
 
