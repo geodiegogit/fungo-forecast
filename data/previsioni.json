@@ -1,60 +1,88 @@
 {
-  "ultimo_aggiornamento": "2026-08-20 20:22:37",
+  "ultimo_aggiornamento": "2026-08-20 20:52:29",
   "stazione": {
     "id": "1545",
     "nome": "San Siro",
     "quota_m": 1285
   },
   "diagnosi_meteo": {
-    "evento_rilevato": true,
-    "data_evento": "2026-08-16",
-    "pioggia_evento_mm": 55.8,
-    "giorni_da_evento": 3,
-    "ritardo_siccita_applicato": 0,
-    "soglia_efficace_richiesta": 35.0,
-    "fattore_smorzamento_resa": 1.0,
     "t_max_attuale": 23.2,
     "t_min_attuale": 15.6,
     "rh_media_attuale": 66.4,
     "vento_max_attuale": 23.9,
-    "pioggia_oggi": 17.8
+    "pioggia_oggi": 17.8,
+    "eventi": [
+      {
+        "indice": 41,
+        "data": "2026-08-16",
+        "pioggia": 55.8,
+        "giorni_da_evento": 3,
+        "ritardo": 0,
+        "soglia": 35.0,
+        "smorzamento": 1.0
+      }
+    ],
+    "evento_rilevato": true,
+    "data_evento": "2026-08-16",
+    "giorni_da_evento": 3,
+    "ritardo_siccita_applicato": 0
   },
   "zone": [
     {
       "zona": "Betulle SE",
       "indice_buttata": 0.3,
-      "indice_picco": 11.8,
       "t_min_stimata": 16.0,
       "t_max_stimata": 26.1,
       "giorni_mancanti_al_picco": 6,
-      "stato": "Incubazione (picco in 6 gg)"
+      "stato": "Incubazione (prossimo picco in 6 gg)",
+      "onde": [
+        {
+          "giorni_mancanti_da_ieri": 6,
+          "indice_picco": 11.8
+        }
+      ]
     },
     {
       "zona": "Betulle NE",
       "indice_buttata": 3.7,
-      "indice_picco": 48.7,
       "t_min_stimata": 16.5,
       "t_max_stimata": 23.1,
       "giorni_mancanti_al_picco": 5,
-      "stato": "Incubazione (picco in 5 gg)"
+      "stato": "Incubazione (prossimo picco in 5 gg)",
+      "onde": [
+        {
+          "giorni_mancanti_da_ieri": 5,
+          "indice_picco": 48.7
+        }
+      ]
     },
     {
       "zona": "Faggi Ovest",
       "indice_buttata": 0.0,
-      "indice_picco": 69.7,
       "t_min_stimata": 13.3,
       "t_max_stimata": 19.9,
       "giorni_mancanti_al_picco": 9,
-      "stato": "Incubazione (picco in 9 gg)"
+      "stato": "Incubazione (prossimo picco in 9 gg)",
+      "onde": [
+        {
+          "giorni_mancanti_da_ieri": 9,
+          "indice_picco": 69.7
+        }
+      ]
     },
     {
       "zona": "Abeti Nord",
       "indice_buttata": 0.0,
-      "indice_picco": 82.7,
       "t_min_stimata": 12.8,
       "t_max_stimata": 19.4,
       "giorni_mancanti_al_picco": 10,
-      "stato": "Incubazione (picco in 10 gg)"
+      "stato": "Incubazione (prossimo picco in 10 gg)",
+      "onde": [
+        {
+          "giorni_mancanti_da_ieri": 10,
+          "indice_picco": 82.7
+        }
+      ]
     }
   ],
   "storico_completo": [
