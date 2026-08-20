@@ -54,7 +54,6 @@
         .z-label { width: 38px; text-align: center; }
         .future-dot { width: 38px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; border: 1px solid #e0e0e0;}
 
-        /* Nuovi Stili per Previsioni Meteo */
         .forecast-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
         .fc-day { font-weight: bold; width: 60px; font-size: 1rem; color: var(--primary); }
         .fc-temps { font-weight: bold; font-size: 1.1rem; }
@@ -83,7 +82,7 @@
             <div id="siccita-text" style="font-size: 0.9rem; line-height: 1.4;">Caricamento...</div>
         </div>
         <div class="card">
-            <h2 class="section-title">Indice di Buttata Oggi</h2>
+            <h2 class="section-title">Indice di Buttata Attuale</h2>
             <div id="zone-container"></div>
         </div>
         <div class="card">
@@ -119,7 +118,7 @@
         <div class="card">
             <h2 class="section-title">Meteo 4 Giorni (MeteoSwiss)</h2>
             <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">
-                Dati in tempo reale centrati su Plesio/San Siro. Modello Svizzero.
+                Perturbazioni da Ovest. Modello Svizzero ad alta precisione.
             </p>
             <div id="forecast-container">Caricamento previsioni in corso...</div>
         </div>
@@ -134,7 +133,7 @@
 
     <script>
         // --- SOSTITUISCI CON IL TUO USERNAME ---
-        const GITHUB_USERNAME = "geodiegogit"; 
+        const GITHUB_USERNAME = "TUO-USERNAME"; 
         const REPO_NAME = "fungo-forecast"; 
         const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main/data/previsioni.json`;
 
@@ -183,7 +182,7 @@
                 globalData = await response.json();
                 renderDashboard();
                 renderCalendars();
-                loadOpenMeteo(); // Carica il tab Meteo
+                loadOpenMeteo(); 
             } catch (error) {
                 document.getElementById('siccita-text').innerHTML = "<b>Errore connessione.</b>";
             }
@@ -221,7 +220,7 @@
 
         function renderDashboard() {
             const data = globalData;
-            document.getElementById('last-update').innerText = "Aggiornato: " + data.ultimo_aggiornamento.substring(0,10);
+            document.getElementById('last-update').innerText = "Dati certi fino a ieri: " + data.ultimo_aggiornamento.substring(0,10);
             
             const diag = data.diagnosi_meteo;
             document.getElementById('siccita-text').innerHTML = `
@@ -247,8 +246,8 @@
                     </div>`;
             });
 
-            if(data.storico_completo && data.storico_completo.length >= 2) {
-                const ieri = data.storico_completo[data.storico_completo.length - 2];
+            if(data.storico_completo && data.storico_completo.length >= 1) {
+                const ieri = data.storico_completo[data.storico_completo.length - 1];
                 document.getElementById('m-tmax').innerText = ieri.t_max + "°";
                 document.getElementById('m-tmin').innerText = ieri.t_min + "°";
                 document.getElementById('m-pioggia').innerText = ieri.pioggia_mm + " mm";
@@ -334,12 +333,13 @@
             document.getElementById('future-calendar').innerHTML = futureHtml;
         }
 
-        // Funzione per scaricare MeteoSwiss al volo
         async function loadOpenMeteo() {
-            // Coordinate medie tra San Siro e Plesio
-            const url = "https://api.open-meteo.com/v1/forecast?latitude=46.06&longitude=9.24&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=Europe/Rome&forecast_days=4&models=meteoswiss_seamless";
+            // Coordinate spostate a Lat 46.06, Lon 9.00 (Verso la Svizzera - Lugano) 
+            // per rimanere all'interno della griglia MeteoSwiss
+            const url = "https://api.open-meteo.com/v1/forecast?latitude=46.06&longitude=9.00&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=Europe/Rome&forecast_days=4&models=meteoswiss_seamless";
             try {
                 const res = await fetch(url);
+                if (!res.ok) throw new Error("Errore API Meteo");
                 const meteoData = await res.json();
                 const d = meteoData.daily;
                 
@@ -367,7 +367,7 @@
                 }
                 document.getElementById('forecast-container').innerHTML = html;
             } catch (e) {
-                document.getElementById('forecast-container').innerHTML = "Errore nel caricamento previsioni.";
+                document.getElementById('forecast-container').innerHTML = "Errore nel caricamento previsioni. Assicurati di essere connesso a internet.";
             }
         }
 
