@@ -82,13 +82,25 @@ class AnalizzatoreSiccitaPorcini:
 
     def analizza(self, serie: List[Dict[str, Any]]) -> Dict[str, Any]:
         n = len(serie)
-        giorno_ieri = serie[-1] # L'ultimo giorno è ora sicuramente IERI, interamente concluso
-        indice_ev, pioggia_ev = None, 0.0
+        giorno_ieri = serie[-1]
+        indice_ev = None
+        pioggia_ev = 0.0
+        data_evento_reale = None
         
+        # Cerca l'evento di pioggia scorrendo all'indietro
         for i in range(n - 1, 2, -1):
+            # Somma 3 giorni (i-2, i-1, i)
             c3 = sum(serie[k]["pioggia_mm"] for k in range(i - 2, i + 1))
+            
             if c3 >= self.soglia_evento:
-                indice_ev, pioggia_ev = i, c3
+                # Se la somma supera i 35mm, troviamo qual è il giorno in cui ha piovuto di più
+                giorni_finestra = [serie[k] for k in range(i - 2, i + 1)]
+                giorno_max_pioggia = max(giorni_finestra, key=lambda x: x["pioggia_mm"])
+                
+                # Salviamo l'indice reale del giorno di massima pioggia all'interno del dataset
+                indice_ev = serie.index(giorno_max_pioggia)
+                pioggia_ev = c3 # Manteniamo la somma totale della perturbazione
+                data_evento_reale = giorno_max_pioggia["data"]
                 break
 
         if indice_ev is None:
@@ -110,7 +122,7 @@ class AnalizzatoreSiccitaPorcini:
 
         return {
             "evento_rilevato": True,
-            "data_evento": serie[indice_ev]["data"],
+            "data_evento": data_evento_reale,
             "pioggia_evento_mm": round(pioggia_ev, 1),
             "giorni_da_evento": giorni_da_ev,
             "ritardo_siccita_applicato": ritardo,
@@ -120,7 +132,7 @@ class AnalizzatoreSiccitaPorcini:
             "t_min_attuale": giorno_ieri["t_min"],
             "rh_media_attuale": giorno_ieri["rh_media"],
             "vento_max_attuale": giorno_ieri["vento_max"],
-            "pioggia_oggi": giorno_ieri["pioggia_mm"] # Che in realtà è pioggia_ieri
+            "pioggia_oggi": giorno_ieri["pioggia_mm"] 
         }
 
 def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[Dict[str, Any]]:
