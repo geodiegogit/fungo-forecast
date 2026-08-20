@@ -1,5 +1,5 @@
 {
-  "ultimo_aggiornamento": "2026-08-20 20:06:12",
+  "ultimo_aggiornamento": "2026-08-20 20:22:37",
   "stazione": {
     "id": "1545",
     "nome": "San Siro",
@@ -8,7 +8,7 @@
   "diagnosi_meteo": {
     "evento_rilevato": true,
     "data_evento": "2026-08-16",
-    "pioggia_evento_mm": 56.0,
+    "pioggia_evento_mm": 55.8,
     "giorni_da_evento": 3,
     "ritardo_siccita_applicato": 0,
     "soglia_efficace_richiesta": 35.0,
@@ -32,7 +32,7 @@
     {
       "zona": "Betulle NE",
       "indice_buttata": 3.7,
-      "indice_picco": 48.8,
+      "indice_picco": 48.7,
       "t_min_stimata": 16.5,
       "t_max_stimata": 23.1,
       "giorni_mancanti_al_picco": 5,
@@ -41,7 +41,7 @@
     {
       "zona": "Faggi Ovest",
       "indice_buttata": 0.0,
-      "indice_picco": 69.9,
+      "indice_picco": 69.7,
       "t_min_stimata": 13.3,
       "t_max_stimata": 19.9,
       "giorni_mancanti_al_picco": 9,
@@ -50,7 +50,7 @@
     {
       "zona": "Abeti Nord",
       "indice_buttata": 0.0,
-      "indice_picco": 82.9,
+      "indice_picco": 82.7,
       "t_min_stimata": 12.8,
       "t_max_stimata": 19.4,
       "giorni_mancanti_al_picco": 10,
