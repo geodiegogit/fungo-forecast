@@ -333,13 +333,15 @@
             document.getElementById('future-calendar').innerHTML = futureHtml;
         }
 
-        async function loadOpenMeteo() {
-            // Coordinate spostate a Lat 46.06, Lon 9.00 (Verso la Svizzera - Lugano) 
-            // per rimanere all'interno della griglia MeteoSwiss
-            const url = "https://api.open-meteo.com/v1/forecast?latitude=46.06&longitude=9.00&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=Europe/Rome&forecast_days=4&models=meteoswiss_seamless";
+async function loadOpenMeteo() {
+            // Coordinate centrate esattamente sul baricentro delle tue 4 zone (Plesio / Sant'Amate)
+            // Rimosso il modello errato: Open-Meteo applicherà automaticamente il "Best Match"
+            // usando i modelli alpini ad alta risoluzione (ICON/Swiss) disponibili per quest'area.
+            const url = "https://api.open-meteo.com/v1/forecast?latitude=46.04&longitude=9.24&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=Europe/Rome&forecast_days=4";
+            
             try {
                 const res = await fetch(url);
-                if (!res.ok) throw new Error("Errore API Meteo");
+                if (!res.ok) throw new Error("Errore API Meteo: " + res.status);
                 const meteoData = await res.json();
                 const d = meteoData.daily;
                 
@@ -367,10 +369,10 @@
                 }
                 document.getElementById('forecast-container').innerHTML = html;
             } catch (e) {
-                document.getElementById('forecast-container').innerHTML = "Errore nel caricamento previsioni. Assicurati di essere connesso a internet.";
+                document.getElementById('forecast-container').innerHTML = "Errore nel caricamento previsioni. " + e.message;
             }
         }
-
+        
         window.onload = initApp;
     </script>
 </body>
