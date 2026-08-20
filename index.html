@@ -292,7 +292,7 @@
             });
         }
 
-        function renderCalendars() {
+function renderCalendars() {
             const data = globalData;
             let diario = JSON.parse(localStorage.getItem('diario_funghi')) || {};
             
@@ -312,7 +312,7 @@
             });
             document.getElementById('past-calendar').innerHTML = pastHtml;
 
-            // --- CALENDARIO HEATMAP (FUTURO CHE PARTE DA OGGI) ---
+            // --- CALENDARIO HEATMAP (ONDE MULTIPLE) ---
             let futureHtml = `
                 <div class="cal-row cal-header">
                     <div class="cal-date">Data</div>
@@ -327,22 +327,26 @@
             
             const oggi = new Date();
             
-            // Il ciclo parte da offset = 0 (OGGI) e arriva fino a 14 (Tra 14 giorni)
             for(let offset = 0; offset <= 14; offset++) {
                 let futureDate = new Date();
                 futureDate.setDate(oggi.getDate() + offset);
                 
-                // Distanza dal giorno ARPA (Ieri). Quindi Oggi (offset=0) ha distanza 1.
                 let distDalDatoCerto = offset + 1; 
                 
                 let dots = '';
                 data.zone.forEach((z) => {
-                    let pm = z.giorni_mancanti_al_picco; 
-                    if(pm === undefined || pm === null) pm = 99;
-                    let dToP = (distDalDatoCerto - pm); 
+                    let finalProj = 0;
                     
-                    let currentMax = z.indice_picco || 0; 
-                    let finalProj = currentMax > 0 ? currentMax * Math.exp(- (dToP*dToP)/(2 * 4.84)) : 0;
+                    // Somma matematica di tutte le ondate (flush) attive per il giorno i-esimo
+                    if (z.onde && z.onde.length > 0) {
+                        z.onde.forEach(onda => {
+                            let dToP = (distDalDatoCerto - onda.giorni_mancanti_da_ieri);
+                            let picco = onda.indice_picco || 0;
+                            if (picco > 0) {
+                                finalProj += picco * Math.exp(- (dToP*dToP)/(2 * 4.84));
+                            }
+                        });
+                    }
                     
                     let pRounded = Math.round(finalProj / 10) * 10;
                     if(pRounded > 100) pRounded = 100;
