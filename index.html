@@ -49,11 +49,18 @@
         .cal-data { flex-grow: 1; text-align: right; color: var(--text-light); font-size: 0.85rem; padding-right: 5px;}
         .cal-diario { width: 25px; text-align: center; font-size: 1.1rem; }
         
-        /* Modifiche per la Griglia Futura */
         .cal-header { font-size: 0.75rem; font-weight: bold; color: var(--text-light); border-bottom: 2px solid #ddd; padding-bottom: 5px;}
         .future-zones { display: flex; gap: 4px; justify-content: flex-end; flex-grow: 1; }
         .z-label { width: 38px; text-align: center; }
         .future-dot { width: 38px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; border: 1px solid #e0e0e0;}
+
+        /* Nuovi Stili per Previsioni Meteo */
+        .forecast-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
+        .fc-day { font-weight: bold; width: 60px; font-size: 1rem; color: var(--primary); }
+        .fc-temps { font-weight: bold; font-size: 1.1rem; }
+        .fc-temps .tmax { color: #F44336; }
+        .fc-temps .tmin { color: #2196F3; font-size: 0.9rem; }
+        .fc-details { text-align: right; font-size: 0.85rem; color: var(--text-light); line-height: 1.4;}
 
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
         .nav-btn { flex: 1; padding: 15px 0; text-align: center; background: none; border: none; font-size: 1rem; color: var(--text-light); font-weight: bold; }
@@ -75,12 +82,10 @@
             <h2 class="section-title">Stato Terreno & Siccità</h2>
             <div id="siccita-text" style="font-size: 0.9rem; line-height: 1.4;">Caricamento...</div>
         </div>
-
         <div class="card">
             <h2 class="section-title">Indice di Buttata Oggi</h2>
             <div id="zone-container"></div>
         </div>
-
         <div class="card">
             <h2 class="section-title">Meteo Stazione Ieri (1285m)</h2>
             <div class="meteo-grid">
@@ -90,7 +95,6 @@
                 <div class="meteo-box"><div class="valore" id="m-vento">--</div><div class="label">Vento Max</div></div>
             </div>
         </div>
-        
         <div class="card">
             <h2 class="section-title">Andamento Recente</h2>
             <div class="chart-container"><canvas id="meteoChart"></canvas></div>
@@ -100,28 +104,36 @@
     <!-- TAB 2: CALENDARIO -->
     <div class="container hidden" id="tab-calendario">
         <div class="card">
-            <h2 class="section-title">Proiezione (Prossimi 15 gg)</h2>
-            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">
-                Calcolo basato unicamente sull'ultimo evento di pioggia certa.
-            </p>
+            <h2 class="section-title">Previsione (Prossimi 15 gg)</h2>
+            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">Calcolo basato su pioggia certa.</p>
             <div id="future-calendar"></div>
         </div>
-
         <div class="card">
             <h2 class="section-title">Storico (Ultimi 15 gg)</h2>
-            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">I funghi 🍄 indicano i tuoi ritrovamenti.</p>
             <div id="past-calendar"></div>
+        </div>
+    </div>
+
+    <!-- TAB 3: PREVISIONI METEO (MeteoSwiss) -->
+    <div class="container hidden" id="tab-meteo">
+        <div class="card">
+            <h2 class="section-title">Meteo 4 Giorni (MeteoSwiss)</h2>
+            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">
+                Dati in tempo reale centrati su Plesio/San Siro. Modello Svizzero.
+            </p>
+            <div id="forecast-container">Caricamento previsioni in corso...</div>
         </div>
     </div>
 
     <!-- BOTTOM NAVIGATION -->
     <div class="bottom-nav">
         <button class="nav-btn active" onclick="switchTab('dashboard')" id="btn-dashboard">📊 Oggi</button>
-        <button class="nav-btn" onclick="switchTab('calendario')" id="btn-calendario">📅 Calendario</button>
+        <button class="nav-btn" onclick="switchTab('calendario')" id="btn-calendario">📅 Heatmap</button>
+        <button class="nav-btn" onclick="switchTab('meteo')" id="btn-meteo">⛅ Meteo</button>
     </div>
 
     <script>
-        // --- SOSTITUISCI CON I TUOI DATI ---
+        // --- SOSTITUISCI CON IL TUO USERNAME ---
         const GITHUB_USERNAME = "geodiegogit"; 
         const REPO_NAME = "fungo-forecast"; 
         const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main/data/previsioni.json`;
@@ -134,7 +146,6 @@
             const lunaNuova = new Date('2024-01-11T11:57:00Z');
             const giorniTrasc = (date - lunaNuova) / 86400000;
             let fase = ((giorniTrasc % ciclo) + ciclo) % ciclo;
-            
             if (fase < 1.5 || fase > 28.5) return '🌑'; 
             if (fase < 7) return '🌓'; 
             if (fase < 13.5) return '🌔'; 
@@ -155,12 +166,11 @@
         function salvaRitrovamento(zona) {
             let diario = JSON.parse(localStorage.getItem('diario_funghi')) || {};
             let oggi = new Date().toISOString().split('T')[0];
-            
             if (!diario[oggi]) diario[oggi] = [];
             if (!diario[oggi].includes(zona)) {
                 diario[oggi].push(zona);
                 localStorage.setItem('diario_funghi', JSON.stringify(diario));
-                alert(`🍄 Ottimo! Ritrovamento in ${zona} salvato nel diario di oggi.`);
+                alert(`🍄 Ottimo! Ritrovamento in ${zona} salvato.`);
                 renderCalendars(); 
             } else {
                 alert(`Hai già segnato un ritrovamento per ${zona} oggi!`);
@@ -170,46 +180,41 @@
         async function initApp() {
             try {
                 const response = await fetch(DATA_URL + '?t=' + new Date().getTime());
-                if (!response.ok) throw new Error("Errore HTTP");
                 globalData = await response.json();
                 renderDashboard();
                 renderCalendars();
+                loadOpenMeteo(); // Carica il tab Meteo
             } catch (error) {
-                document.getElementById('siccita-text').innerHTML = "<b>Errore. Attendi aggiornamento server.</b>";
+                document.getElementById('siccita-text').innerHTML = "<b>Errore connessione.</b>";
             }
         }
 
         function switchTab(tab) {
-            document.getElementById('tab-dashboard').classList.add('hidden');
-            document.getElementById('tab-calendario').classList.add('hidden');
-            document.getElementById('btn-dashboard').classList.remove('active');
-            document.getElementById('btn-calendario').classList.remove('active');
-            
+            document.querySelectorAll('.container').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + tab).classList.remove('hidden');
             document.getElementById('btn-' + tab).classList.add('active');
         }
 
-        // Colori classici semaforo (per Dashboard)
         function getColor(indice) {
             if (indice >= 65) return "var(--success)";
             if (indice >= 30) return "var(--warning)";
             return "var(--danger)";
         }
 
-        // Heatmap Termica (per il Calendario Futuro)
         function getHeatmapColor(p) {
             const colors = {
                 0:   {bg: '#ffffff', txt: '#cccccc', border: '#eeeeee'},
-                10:  {bg: '#fffde7', txt: '#777777', border: '#fff59d'}, // Giallino pallido
-                20:  {bg: '#fff59d', txt: '#333333', border: '#ffee58'}, // Giallo
+                10:  {bg: '#fffde7', txt: '#777777', border: '#fff59d'}, 
+                20:  {bg: '#fff59d', txt: '#333333', border: '#ffee58'}, 
                 30:  {bg: '#ffee58', txt: '#333333', border: '#fdd835'},
-                40:  {bg: '#ffca28', txt: '#333333', border: '#ffb300'}, // Ambra
-                50:  {bg: '#ffa726', txt: '#ffffff', border: '#fb8c00'}, // Arancione
+                40:  {bg: '#ffca28', txt: '#333333', border: '#ffb300'}, 
+                50:  {bg: '#ffa726', txt: '#ffffff', border: '#fb8c00'}, 
                 60:  {bg: '#ff9800', txt: '#ffffff', border: '#f57c00'},
-                70:  {bg: '#f4511e', txt: '#ffffff', border: '#e64a19'}, // Arancione scuro
-                80:  {bg: '#e53935', txt: '#ffffff', border: '#d32f2f'}, // Rosso
+                70:  {bg: '#f4511e', txt: '#ffffff', border: '#e64a19'}, 
+                80:  {bg: '#e53935', txt: '#ffffff', border: '#d32f2f'}, 
                 90:  {bg: '#c62828', txt: '#ffffff', border: '#b71c1c'},
-                100: {bg: '#b71c1c', txt: '#ffffff', border: '#7f0000'}  // Rosso intenso
+                100: {bg: '#b71c1c', txt: '#ffffff', border: '#7f0000'}  
             };
             return colors[p] || colors[0];
         }
@@ -268,27 +273,21 @@
             const data = globalData;
             let diario = JSON.parse(localStorage.getItem('diario_funghi')) || {};
             
-            // --- PASSATO ---
             const past = data.storico_completo.slice(-15).reverse();
             let pastHtml = '';
             past.forEach(d => {
                 let icon = getMeteoIcon(d.pioggia_mm, d.vento_max, d.t_min);
-                let luna = getFaseLunare(d.data);
-                let trovato = diario[d.data] ? '🍄' : '';
-
                 pastHtml += `
                     <div class="cal-row">
                         <div class="cal-date">${d.data.substring(5, 10).replace('-', '/')}</div>
-                        <div class="cal-luna">${luna}</div>
+                        <div class="cal-luna">${getFaseLunare(d.data)}</div>
                         <div class="cal-icon">${icon}</div>
                         <div class="cal-data">${d.pioggia_mm}mm | ${Math.round(d.t_min)}°/${Math.round(d.t_max)}°</div>
-                        <div class="cal-diario">${trovato}</div>
+                        <div class="cal-diario">${diario[d.data] ? '🍄' : ''}</div>
                     </div>`;
             });
             document.getElementById('past-calendar').innerHTML = pastHtml;
 
-            // --- FUTURO (Mappa di Calore) ---
-            // Intestazione Colonne (Legenda Zone)
             let futureHtml = `
                 <div class="cal-row cal-header">
                     <div class="cal-date">Data</div>
@@ -299,49 +298,77 @@
                         <div class="z-label">FAG</div>
                         <div class="z-label">PIN</div>
                     </div>
-                </div>
-            `;
+                </div>`;
             
             const oggi = new Date();
-            
             for(let i=1; i<=15; i++) {
                 let futureDate = new Date();
                 futureDate.setDate(oggi.getDate() + i);
-                let dateStr = futureDate.toISOString().split('T')[0];
-                let dd = String(futureDate.getDate()).padStart(2, '0');
-                let mm = String(futureDate.getMonth() + 1).padStart(2, '0');
-                let luna = getFaseLunare(dateStr);
+                let dist = i;
                 
                 let dots = '';
                 data.zone.forEach((z) => {
                     let pm = z.giorni_mancanti_al_picco; 
                     if(pm === undefined || pm === null) pm = 99;
+                    let dToP = (dist - pm); 
                     
-                    let dist = (i - pm); 
-                    
-// Leggiamo il vero potenziale calcolato da Python, senza dedurlo al contrario!
                     let currentMax = z.indice_picco || 0; 
-                    let finalProj = currentMax > 0 ? currentMax * Math.exp(- (dist*dist)/(2 * 4.84)) : 0;
+                    let finalProj = currentMax > 0 ? currentMax * Math.exp(- (dToP*dToP)/(2 * 4.84)) : 0;
                     
-                    // Arrotonda alla decina più vicina (0, 10, 20... 100)
                     let pRounded = Math.round(finalProj / 10) * 10;
                     if(pRounded > 100) pRounded = 100;
                     if(pRounded < 0) pRounded = 0;
 
                     let c = getHeatmapColor(pRounded);
                     let label = pRounded === 0 ? '-' : pRounded + '%';
-
                     dots += `<div class="future-dot" style="background-color: ${c.bg}; color: ${c.txt}; border-color: ${c.border};">${label}</div>`;
                 });
 
                 futureHtml += `
                     <div class="cal-row">
-                        <div class="cal-date">${dd}/${mm}</div>
-                        <div class="cal-luna">${luna}</div>
+                        <div class="cal-date">${String(futureDate.getDate()).padStart(2, '0')}/${String(futureDate.getMonth() + 1).padStart(2, '0')}</div>
+                        <div class="cal-luna">${getFaseLunare(futureDate.toISOString().split('T')[0])}</div>
                         <div class="future-zones">${dots}</div>
                     </div>`;
             }
             document.getElementById('future-calendar').innerHTML = futureHtml;
+        }
+
+        // Funzione per scaricare MeteoSwiss al volo
+        async function loadOpenMeteo() {
+            // Coordinate medie tra San Siro e Plesio
+            const url = "https://api.open-meteo.com/v1/forecast?latitude=46.06&longitude=9.24&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=Europe/Rome&forecast_days=4&models=meteoswiss_seamless";
+            try {
+                const res = await fetch(url);
+                const meteoData = await res.json();
+                const d = meteoData.daily;
+                
+                let html = '';
+                const giorni = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
+                
+                for(let i = 0; i < d.time.length; i++) {
+                    let dataObj = new Date(d.time[i]);
+                    let nomeGiorno = i === 0 ? "Oggi" : (i === 1 ? "Domani" : giorni[dataObj.getDay()]);
+                    let icona = getMeteoIcon(d.precipitation_sum[i], d.wind_speed_10m_max[i], d.temperature_2m_min[i]);
+                    
+                    html += `
+                        <div class="forecast-row">
+                            <div class="fc-day">${nomeGiorno}</div>
+                            <div class="cal-icon">${icona}</div>
+                            <div class="fc-temps">
+                                <span class="tmax">${Math.round(d.temperature_2m_max[i])}°</span> / 
+                                <span class="tmin">${Math.round(d.temperature_2m_min[i])}°</span>
+                            </div>
+                            <div class="fc-details">
+                                💧 ${d.precipitation_sum[i]} mm<br>
+                                💨 ${Math.round(d.wind_speed_10m_max[i])} km/h
+                            </div>
+                        </div>`;
+                }
+                document.getElementById('forecast-container').innerHTML = html;
+            } catch (e) {
+                document.getElementById('forecast-container').innerHTML = "Errore nel caricamento previsioni.";
+            }
         }
 
         window.onload = initApp;
