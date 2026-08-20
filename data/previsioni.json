@@ -1,5 +1,5 @@
 {
-  "ultimo_aggiornamento": "2026-08-20 19:34:29",
+  "ultimo_aggiornamento": "2026-08-20 20:06:12",
   "stazione": {
     "id": "1545",
     "nome": "San Siro",
@@ -7,9 +7,9 @@
   },
   "diagnosi_meteo": {
     "evento_rilevato": true,
-    "data_evento": "2026-08-18",
+    "data_evento": "2026-08-16",
     "pioggia_evento_mm": 56.0,
-    "giorni_da_evento": 1,
+    "giorni_da_evento": 3,
     "ritardo_siccita_applicato": 0,
     "soglia_efficace_richiesta": 35.0,
     "fattore_smorzamento_resa": 1.0,
@@ -22,21 +22,21 @@
   "zone": [
     {
       "zona": "Betulle SE",
-      "indice_buttata": 0.0,
+      "indice_buttata": 0.3,
       "indice_picco": 11.8,
       "t_min_stimata": 16.0,
       "t_max_stimata": 26.1,
-      "giorni_mancanti_al_picco": 8,
-      "stato": "Incubazione (picco in 8 gg)"
+      "giorni_mancanti_al_picco": 6,
+      "stato": "Incubazione (picco in 6 gg)"
     },
     {
       "zona": "Betulle NE",
-      "indice_buttata": 0.3,
+      "indice_buttata": 3.7,
       "indice_picco": 48.8,
       "t_min_stimata": 16.5,
       "t_max_stimata": 23.1,
-      "giorni_mancanti_al_picco": 7,
-      "stato": "Incubazione (picco in 7 gg)"
+      "giorni_mancanti_al_picco": 5,
+      "stato": "Incubazione (picco in 5 gg)"
     },
     {
       "zona": "Faggi Ovest",
@@ -44,8 +44,8 @@
       "indice_picco": 69.9,
       "t_min_stimata": 13.3,
       "t_max_stimata": 19.9,
-      "giorni_mancanti_al_picco": 11,
-      "stato": "Incubazione (picco in 11 gg)"
+      "giorni_mancanti_al_picco": 9,
+      "stato": "Incubazione (picco in 9 gg)"
     },
     {
       "zona": "Abeti Nord",
@@ -53,8 +53,8 @@
       "indice_picco": 82.9,
       "t_min_stimata": 12.8,
       "t_max_stimata": 19.4,
-      "giorni_mancanti_al_picco": 12,
-      "stato": "Incubazione (picco in 12 gg)"
+      "giorni_mancanti_al_picco": 10,
+      "stato": "Incubazione (picco in 10 gg)"
     }
   ],
   "storico_completo": [
