@@ -44,7 +44,14 @@ def download_weather_history(mappa_sensori: Dict[str, str], days: int = 45) -> p
 
 def aggregate_daily(df_hourly: pd.DataFrame) -> List[Dict[str, Any]]:
     if df_hourly.empty: return []
+    
+    # FORMATTAZIONE E FILTRO: Rimuoviamo il giorno in corso per evitare dati parziali
     df_hourly["giorno"] = df_hourly["data"].dt.strftime("%Y-%m-%d")
+    oggi_str = datetime.now().strftime("%Y-%m-%d")
+    df_hourly = df_hourly[df_hourly["giorno"] < oggi_str]
+    
+    if df_hourly.empty: return []
+
     agg_rules = {}
     if "pioggia" in df_hourly.columns: agg_rules["pioggia"] = "sum"
     if "umidita" in df_hourly.columns: agg_rules["umidita"] = "mean"
@@ -75,10 +82,9 @@ class AnalizzatoreSiccitaPorcini:
 
     def analizza(self, serie: List[Dict[str, Any]]) -> Dict[str, Any]:
         n = len(serie)
-        giorno_oggi = serie[-1]
+        giorno_ieri = serie[-1] # L'ultimo giorno è ora sicuramente IERI, interamente concluso
         indice_ev, pioggia_ev = None, 0.0
         
-        # Cerca l'evento di pioggia
         for i in range(n - 1, 2, -1):
             c3 = sum(serie[k]["pioggia_mm"] for k in range(i - 2, i + 1))
             if c3 >= self.soglia_evento:
@@ -91,7 +97,6 @@ class AnalizzatoreSiccitaPorcini:
         giorni_da_ev = (n - 1) - indice_ev
         p_pre_30 = sum(serie[k]["pioggia_mm"] for k in range(max(0, indice_ev - 32), max(0, indice_ev - 2)))
         
-        # Nuove tolleranze ammorbidite per piogge intense
         if p_pre_30 >= 60.0: ritardo, soglia, smorz = 0, 35.0, 1.00
         elif 25.0 <= p_pre_30 < 60.0: ritardo, soglia, smorz = 3, 40.0, 0.90
         else: ritardo, soglia, smorz = 5, 50.0, 0.80
@@ -111,11 +116,11 @@ class AnalizzatoreSiccitaPorcini:
             "ritardo_siccita_applicato": ritardo,
             "soglia_efficace_richiesta": soglia,
             "fattore_smorzamento_resa": smorz * danno_favonio,
-            "t_max_attuale": giorno_oggi["t_max"],
-            "t_min_attuale": giorno_oggi["t_min"],
-            "rh_media_attuale": giorno_oggi["rh_media"],
-            "vento_max_attuale": giorno_oggi["vento_max"],
-            "pioggia_oggi": giorno_oggi["pioggia_mm"]
+            "t_max_attuale": giorno_ieri["t_max"],
+            "t_min_attuale": giorno_ieri["t_min"],
+            "rh_media_attuale": giorno_ieri["rh_media"],
+            "vento_max_attuale": giorno_ieri["vento_max"],
+            "pioggia_oggi": giorno_ieri["pioggia_mm"] # Che in realtà è pioggia_ieri
         }
 
 def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[Dict[str, Any]]:
@@ -146,7 +151,6 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         else:
             t_max_eff, t_min_eff, rh_eff = t_max_b, t_min_b, diag["rh_media_attuale"]
 
-        # Formule Base
         f_R = 1.0 / (1.0 + math.exp(-0.12 * (diag["pioggia_evento_mm"] - diag["soglia_efficace_richiesta"])))
         picco_eff = z["giorni_base"] + diag["ritardo_siccita_applicato"]
         f_L = math.exp(- ((diag["giorni_da_evento"] - picco_eff) ** 2) / (2 * (2.2 ** 2)))
