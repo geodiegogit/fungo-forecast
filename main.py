@@ -120,10 +120,10 @@ class AnalizzatoreSiccitaPorcini:
 
 def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[Dict[str, Any]]:
     zone_cfg = [
-        {"nome": "Betulle Sud-Est", "quota": 1100, "essenza": "betulla", "esposizione": "SE", "giorni_base": 9},
-        {"nome": "Betulle Nord-Est", "quota": 1100, "essenza": "betulla", "esposizione": "NE", "giorni_base": 8},
-        {"nome": "Faggeta Alta", "quota": 1350, "essenza": "faggio", "esposizione": "SE", "giorni_base": 12},
-        {"nome": "Pini & Retroverso Svizzera", "quota": 1450, "essenza": "pino", "esposizione": "OMBRA_SVIZZERA", "giorni_base": 13}
+        {"nome": "Betulle SE", "quota": 1222, "essenza": "betulla", "esposizione": "SE", "giorni_base": 9},
+        {"nome": "Betulle NE", "quota": 1144, "essenza": "betulla", "esposizione": "NE", "giorni_base": 8},
+        {"nome": "Faggi Ovest", "quota": 1561, "essenza": "faggio", "esposizione": "OVEST_OMBRA", "giorni_base": 12},
+        {"nome": "Abeti Nord", "quota": 1478, "essenza": "pino", "esposizione": "NORD", "giorni_base": 13}
     ]
 
     if not diag.get("evento_rilevato"):
@@ -139,15 +139,19 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
             t_max_eff, t_min_eff, rh_eff = t_max_b + 2.5, t_min_b, max(0.0, diag["rh_media_attuale"] - 10.0)
         elif z["esposizione"] == "NE":
             t_max_eff, t_min_eff, rh_eff = t_max_b - 1.0, t_min_b, min(100.0, diag["rh_media_attuale"] + 12.0)
+        elif z["esposizione"] == "OVEST_OMBRA":
+            t_max_eff, t_min_eff, rh_eff = t_max_b - 1.5, t_min_b - 0.5, min(100.0, diag["rh_media_attuale"] + 15.0)
+        elif z["esposizione"] == "NORD":
+            t_max_eff, t_min_eff, rh_eff = t_max_b - 2.5, t_min_b - 1.5, min(100.0, diag["rh_media_attuale"] + 20.0)
         else:
-            t_max_eff, t_min_eff, rh_eff = t_max_b - 2.5, t_min_b - 1.0, min(100.0, diag["rh_media_attuale"] + 18.0)
+            t_max_eff, t_min_eff, rh_eff = t_max_b, t_min_b, diag["rh_media_attuale"]
 
-        # Pioggia più responsiva (-0.12)
+        # Formule Base
         f_R = 1.0 / (1.0 + math.exp(-0.12 * (diag["pioggia_evento_mm"] - diag["soglia_efficace_richiesta"])))
         picco_eff = z["giorni_base"] + diag["ritardo_siccita_applicato"]
         f_L = math.exp(- ((diag["giorni_da_evento"] - picco_eff) ** 2) / (2 * (2.2 ** 2)))
         
-        t_opt = 16.5 if z["essenza"] != "pino" else 14.5
+        t_opt = 16.5 if z["essenza"] not in ["pino", "faggio"] else 14.5
         t_media_eff = (t_max_eff + t_min_eff) / 2
         f_T_media = math.exp(- ((t_media_eff - t_opt) ** 2) / (2 * (3.5 ** 2)))
         
@@ -158,15 +162,11 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         is_favonio = (vento > 20 and diag["rh_media_attuale"] < 60 and diag["pioggia_oggi"] < 1.0)
         phi_vento = max(0.1, 1.0 - 0.04 * (vento - 20)) if is_favonio else 1.0
 
-        # Calcolo dell'INDICE PIENO (senza il ritardo temporale)
         indice_pieno = 100.0 * (f_R * (f_T_media * f_T_freddo) * 1.0 * f_H) * phi_vento * diag["fattore_smorzamento_resa"]
-        
-        # Indice di OGGI (abbattuto dal ritardo temporale f_L)
         indice = indice_pieno * f_L
-        
         giorni_mancanti = picco_eff - diag["giorni_da_evento"]
         
-        if f_T_freddo == 0.0: stato = "Bloccato dal freddo"
+        if f_T_freddo == 0.0: stato = "Blocco da freddo notturno"
         elif indice > 65: stato = "Buttata in corso"
         elif giorni_mancanti > 0: stato = f"Incubazione (picco in {giorni_mancanti} gg)"
         else: stato = "In esaurimento"
@@ -174,7 +174,7 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         res.append({
             "zona": z["nome"],
             "indice_buttata": round(indice, 1),
-            "indice_picco": round(indice_pieno, 1),  # <-- AGGIUNTA FONDAMENTALE PER LA WEB APP
+            "indice_picco": round(indice_pieno, 1),
             "t_min_stimata": round(t_min_eff, 1),
             "t_max_stimata": round(t_max_eff, 1),
             "giorni_mancanti_al_picco": giorni_mancanti,
