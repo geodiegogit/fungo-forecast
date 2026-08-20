@@ -24,7 +24,7 @@
 
         header { background-color: var(--primary); color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         header h1 { font-size: 1.3rem; }
-        .update-time { font-size: 0.75rem; opacity: 0.8; margin-top: 3px; }
+        .update-time { font-size: 0.8rem; font-weight: bold; margin-top: 4px; color: #e8f5e9; }
 
         .container { padding: 15px; max-width: 600px; margin: 0 auto; }
         .card { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
@@ -78,11 +78,11 @@
     <!-- TAB 1: DASHBOARD -->
     <div class="container" id="tab-dashboard">
         <div class="card">
-            <h2 class="section-title">Stato Terreno & Siccità</h2>
+            <h2 class="section-title">Stato Terreno & Siccità (Fino a Ieri)</h2>
             <div id="siccita-text" style="font-size: 0.9rem; line-height: 1.4;">Caricamento...</div>
         </div>
         <div class="card">
-            <h2 class="section-title">Indice di Buttata Attuale</h2>
+            <h2 class="section-title">Indice di Buttata Oggi (Proiezione)</h2>
             <div id="zone-container"></div>
         </div>
         <div class="card">
@@ -103,12 +103,12 @@
     <!-- TAB 2: CALENDARIO -->
     <div class="container hidden" id="tab-calendario">
         <div class="card">
-            <h2 class="section-title">Previsione (Prossimi 15 gg)</h2>
-            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">Calcolo basato su pioggia certa.</p>
+            <h2 class="section-title">Proiezione a 15 Giorni</h2>
+            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">Parte da oggi. Calcolo matematico sull'ultima pioggia.</p>
             <div id="future-calendar"></div>
         </div>
         <div class="card">
-            <h2 class="section-title">Storico (Ultimi 15 gg)</h2>
+            <h2 class="section-title">Storico Dati Certi (ARPA)</h2>
             <div id="past-calendar"></div>
         </div>
     </div>
@@ -116,9 +116,9 @@
     <!-- TAB 3: PREVISIONI METEO (MeteoSwiss) -->
     <div class="container hidden" id="tab-meteo">
         <div class="card">
-            <h2 class="section-title">Meteo 4 Giorni (MeteoSwiss)</h2>
+            <h2 class="section-title">Meteo 4 Giorni (Open-Meteo)</h2>
             <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">
-                Perturbazioni da Ovest. Modello Svizzero ad alta precisione.
+                Dati orari centrati su Betulle Sud-Est (Quota 1.222m).
             </p>
             <div id="forecast-container">Caricamento previsioni in corso...</div>
         </div>
@@ -133,11 +133,18 @@
 
     <script>
         // --- SOSTITUISCI CON IL TUO USERNAME ---
-        const GITHUB_USERNAME = "geodiegogit"; 
+        const GITHUB_USERNAME = "TUO-USERNAME"; 
         const REPO_NAME = "fungo-forecast"; 
         const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main/data/previsioni.json`;
 
         let globalData = null;
+
+        // Funzione per forzare SEMPRE la data in formato Giorno/Mese (DD/MM)
+        function formatDDMM(dateString) {
+            const parts = dateString.split('T')[0].split('-');
+            if(parts.length === 3) return `${parts[2]}/${parts[1]}`;
+            return dateString;
+        }
 
         function getFaseLunare(dataStr) {
             const date = new Date(dataStr);
@@ -220,19 +227,36 @@
 
         function renderDashboard() {
             const data = globalData;
-            document.getElementById('last-update').innerText = "Dati certi fino a ieri: " + data.ultimo_aggiornamento.substring(0,10);
+            
+            // Estraggo la vera data dell'ultimo giorno presente in archivio (Ieri)
+            let ultimoDato = data.storico_completo[data.storico_completo.length - 1].data;
+            document.getElementById('last-update').innerText = "Dati certi ARPA aggiornati al: " + formatDDMM(ultimoDato);
             
             const diag = data.diagnosi_meteo;
+            // Se diag.giorni_da_evento è calcolato su Ieri, aggiungiamo +1 per farlo riferire a Oggi
+            let ggDaEvento = diag.giorni_da_evento !== undefined ? (diag.giorni_da_evento + 1) : null;
+            
             document.getElementById('siccita-text').innerHTML = `
                 <strong>Stato Generale:</strong> ${diag.evento_rilevato ? 'Ciclo idrico in corso' : 'In attesa'}<br>
-                <strong>Ultima pioggia:</strong> ${diag.giorni_da_evento !== undefined ? diag.giorni_da_evento + ' gg fa' : 'N/D'}<br>
+                <strong>Ultimo evento piovoso:</strong> ${ggDaEvento !== null ? ggDaEvento + ' gg fa' : 'N/D'}<br>
                 <strong>Ritardo Siccità:</strong> ${diag.ritardo_siccita_applicato > 0 ? '+' + diag.ritardo_siccita_applicato + ' gg' : 'Nessuno'}<br>
             `;
 
             const zc = document.getElementById('zone-container');
             zc.innerHTML = '';
+            
+            // Calcolo proiezione di OGGI (distanza = 1 dal dato di Ieri)
             data.zone.forEach(z => {
-                let ind = z.indice_buttata || 0;
+                let pm = z.giorni_mancanti_al_picco; 
+                if(pm === undefined || pm === null) pm = 99;
+                
+                let dToP = (1 - pm); // Oggi è 1 giorno dopo "ieri"
+                let currentMax = z.indice_picco || 0; 
+                let todayProj = currentMax > 0 ? currentMax * Math.exp(- (dToP*dToP)/(2 * 4.84)) : 0;
+                
+                if (todayProj > 100) todayProj = 100;
+
+                let ind = todayProj || 0;
                 zc.innerHTML += `
                     <div class="zona-item">
                         <div class="zona-info">
@@ -258,7 +282,7 @@
             new Chart(document.getElementById('meteoChart').getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: st.map(d => d.data.substring(5)),
+                    labels: st.map(d => formatDDMM(d.data)), // Formattato DD/MM
                     datasets: [
                         { label: 'Pioggia', data: st.map(d => d.pioggia_mm), backgroundColor: '#2196F3', yAxisID: 'y' },
                         { label: 'T.Max', data: st.map(d => d.t_max), borderColor: '#F44336', type: 'line', yAxisID: 'y1' }
@@ -272,13 +296,14 @@
             const data = globalData;
             let diario = JSON.parse(localStorage.getItem('diario_funghi')) || {};
             
+            // --- CALENDARIO STORICO PASSATO ---
             const past = data.storico_completo.slice(-15).reverse();
             let pastHtml = '';
             past.forEach(d => {
                 let icon = getMeteoIcon(d.pioggia_mm, d.vento_max, d.t_min);
                 pastHtml += `
                     <div class="cal-row">
-                        <div class="cal-date">${d.data.substring(5, 10).replace('-', '/')}</div>
+                        <div class="cal-date">${formatDDMM(d.data)}</div>
                         <div class="cal-luna">${getFaseLunare(d.data)}</div>
                         <div class="cal-icon">${icon}</div>
                         <div class="cal-data">${d.pioggia_mm}mm | ${Math.round(d.t_min)}°/${Math.round(d.t_max)}°</div>
@@ -287,6 +312,7 @@
             });
             document.getElementById('past-calendar').innerHTML = pastHtml;
 
+            // --- CALENDARIO HEATMAP (FUTURO CHE PARTE DA OGGI) ---
             let futureHtml = `
                 <div class="cal-row cal-header">
                     <div class="cal-date">Data</div>
@@ -300,16 +326,20 @@
                 </div>`;
             
             const oggi = new Date();
-            for(let i=1; i<=15; i++) {
+            
+            // Il ciclo parte da offset = 0 (OGGI) e arriva fino a 14 (Tra 14 giorni)
+            for(let offset = 0; offset <= 14; offset++) {
                 let futureDate = new Date();
-                futureDate.setDate(oggi.getDate() + i);
-                let dist = i;
+                futureDate.setDate(oggi.getDate() + offset);
+                
+                // Distanza dal giorno ARPA (Ieri). Quindi Oggi (offset=0) ha distanza 1.
+                let distDalDatoCerto = offset + 1; 
                 
                 let dots = '';
                 data.zone.forEach((z) => {
                     let pm = z.giorni_mancanti_al_picco; 
                     if(pm === undefined || pm === null) pm = 99;
-                    let dToP = (dist - pm); 
+                    let dToP = (distDalDatoCerto - pm); 
                     
                     let currentMax = z.indice_picco || 0; 
                     let finalProj = currentMax > 0 ? currentMax * Math.exp(- (dToP*dToP)/(2 * 4.84)) : 0;
@@ -333,8 +363,7 @@
             document.getElementById('future-calendar').innerHTML = futureHtml;
         }
 
-async function loadOpenMeteo() {
-            // URL testato e funzionante con dati orari ad alta precisione per quota 1222m
+        async function loadOpenMeteo() {
             const url = "https://api.open-meteo.com/v1/forecast?latitude=46.0770&longitude=9.2424&elevation=1222&hourly=temperature_2m,relative_humidity_2m,precipitation&timezone=Europe/Rome";
             
             try {
@@ -343,7 +372,6 @@ async function loadOpenMeteo() {
                 const data = await res.json();
                 const h = data.hourly;
                 
-                // Raggruppiamo i dati orari per giorno solare
                 let daysMap = {};
                 for(let i = 0; i < h.time.length; i++) {
                     let datePart = h.time[i].split('T')[0];
@@ -358,7 +386,6 @@ async function loadOpenMeteo() {
                 const giorni = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
                 let count = 0;
 
-                // Mostriamo i primi 4 giorni disponibili
                 for(let date in daysMap) {
                     if(count >= 4) break; 
                     
@@ -391,7 +418,7 @@ async function loadOpenMeteo() {
                 document.getElementById('forecast-container').innerHTML = "Errore nel caricamento previsioni: " + e.message;
             }
         }
-        
+
         window.onload = initApp;
     </script>
 </body>
