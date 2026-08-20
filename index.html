@@ -334,37 +334,57 @@
         }
 
 async function loadOpenMeteo() {
-            // Utilizzo dell'endpoint DEDICATO MeteoSwiss di Open-Meteo per i modelli ad altissima risoluzione (ICON-CH1/CH2).
-            // Coordinate centrate esattamente sui tuoi boschi (Plesio / Sant'Amate)
-            const url = "https://api.open-meteo.com/v1/meteoswiss?latitude=46.04&longitude=9.24&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=Europe/Rome&forecast_days=4";
+            // URL testato e funzionante con dati orari ad alta precisione per quota 1222m
+            const url = "https://api.open-meteo.com/v1/forecast?latitude=46.0770&longitude=9.2424&elevation=1222&hourly=temperature_2m,relative_humidity_2m,precipitation&timezone=Europe/Rome";
             
             try {
                 const res = await fetch(url);
-                if (!res.ok) throw new Error("Errore API MeteoSwiss: " + res.status);
-                const meteoData = await res.json();
-                const d = meteoData.daily;
+                if (!res.ok) throw new Error("Errore API Meteo: " + res.status);
+                const data = await res.json();
+                const h = data.hourly;
                 
+                // Raggruppiamo i dati orari per giorno solare
+                let daysMap = {};
+                for(let i = 0; i < h.time.length; i++) {
+                    let datePart = h.time[i].split('T')[0];
+                    if(!daysMap[datePart]) {
+                        daysMap[datePart] = { temps: [], prec: 0 };
+                    }
+                    if(h.temperature_2m[i] !== null) daysMap[datePart].temps.push(h.temperature_2m[i]);
+                    if(h.precipitation[i] !== null) daysMap[datePart].prec += h.precipitation[i];
+                }
+
                 let html = '';
                 const giorni = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
-                
-                for(let i = 0; i < d.time.length; i++) {
-                    let dataObj = new Date(d.time[i]);
-                    let nomeGiorno = i === 0 ? "Oggi" : (i === 1 ? "Domani" : giorni[dataObj.getDay()]);
-                    let icona = getMeteoIcon(d.precipitation_sum[i], d.wind_speed_10m_max[i], d.temperature_2m_min[i]);
+                let count = 0;
+
+                // Mostriamo i primi 4 giorni disponibili
+                for(let date in daysMap) {
+                    if(count >= 4) break; 
+                    
+                    let temps = daysMap[date].temps;
+                    let tmax = temps.length ? Math.round(Math.max(...temps)) : '--';
+                    let tmin = temps.length ? Math.round(Math.min(...temps)) : '--';
+                    let pTot = daysMap[date].prec.toFixed(1);
+                    
+                    let dataObj = new Date(date);
+                    let nomeGiorno = count === 0 ? "Oggi" : (count === 1 ? "Domani" : giorni[dataObj.getDay()]);
+                    let icona = getMeteoIcon(parseFloat(pTot), 15, tmin);
                     
                     html += `
                         <div class="forecast-row">
                             <div class="fc-day">${nomeGiorno}</div>
                             <div class="cal-icon">${icona}</div>
                             <div class="fc-temps">
-                                <span class="tmax">${Math.round(d.temperature_2m_max[i])}°</span> / 
-                                <span class="tmin">${Math.round(d.temperature_2m_min[i])}°</span>
+                                <span class="tmax">${tmax}°</span> / 
+                                <span class="tmin">${tmin}°</span>
                             </div>
                             <div class="fc-details">
-                                💧 ${d.precipitation_sum[i]} mm<br>
-                                💨 ${Math.round(d.wind_speed_10m_max[i])} km/h
+                                💧 ${pTot} mm<br>
+                                🎯 Quota 1.222m
                             </div>
                         </div>`;
+                    count++;
                 }
                 document.getElementById('forecast-container').innerHTML = html;
             } catch (e) {
