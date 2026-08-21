@@ -16,7 +16,6 @@
         :root {
             --bg-color: #f4f7f6; --primary: #2E7D32; --card-bg: #ffffff;
             --text-main: #333333; --text-light: #666666;
-            --success: #4CAF50; --warning: #FF9800; --danger: #F44336;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
@@ -38,7 +37,7 @@
         .zona-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
         .zona-info h3 { font-size: 1rem; margin-bottom: 4px; }
         .zona-stato { font-size: 0.8rem; color: var(--text-light); }
-        .progress-circle { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 0.85rem; }
+        .progress-circle { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem; border: 1px solid #e0e0e0; }
         
         .btn-trovati { background: #ffecb3; border: 1px solid #ffc107; border-radius: 20px; padding: 4px 10px; font-size: 0.75rem; cursor: pointer; font-weight: bold; margin-top: 5px; display: inline-block; color: #d84315; }
 
@@ -55,12 +54,7 @@
         .future-dot { width: 38px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; border: 1px solid #e0e0e0;}
 
         .forecast-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
-        .fc-day { font-weight: bold; width: 60px; font-size: 1rem; color: var(--primary); }
-        .fc-temps { font-weight: bold; font-size: 1.1rem; }
-        .fc-temps .tmax { color: #F44336; }
-        .fc-temps .tmin { color: #2196F3; font-size: 0.9rem; }
-        .fc-details { text-align: right; font-size: 0.85rem; color: var(--text-light); line-height: 1.4;}
-
+        
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
         .nav-btn { flex: 1; padding: 15px 0; text-align: center; background: none; border: none; font-size: 1rem; color: var(--text-light); font-weight: bold; }
         .nav-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
@@ -113,12 +107,12 @@
         </div>
     </div>
 
-    <!-- TAB 3: PREVISIONI METEO (MeteoSwiss) -->
+    <!-- TAB 3: PREVISIONI METEO -->
     <div class="container hidden" id="tab-meteo">
         <div class="card">
             <h2 class="section-title">Meteo 4 Giorni (Open-Meteo)</h2>
             <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">
-                Dati orari centrati su Betulle Sud-Est (Quota 1.222m).
+                Dati orari centrati su Betulle Sud-Est (Quota 1.222m). 
             </p>
             <div id="forecast-container">Caricamento previsioni in corso...</div>
         </div>
@@ -139,7 +133,6 @@
 
         let globalData = null;
 
-        // Funzione per forzare SEMPRE la data in formato Giorno/Mese (DD/MM)
         function formatDDMM(dateString) {
             const parts = dateString.split('T')[0].split('-');
             if(parts.length === 3) return `${parts[2]}/${parts[1]}`;
@@ -202,12 +195,7 @@
             document.getElementById('btn-' + tab).classList.add('active');
         }
 
-        function getColor(indice) {
-            if (indice >= 65) return "var(--success)";
-            if (indice >= 30) return "var(--warning)";
-            return "var(--danger)";
-        }
-
+        // Funzione Unica per i Colori
         function getHeatmapColor(p) {
             const colors = {
                 0:   {bg: '#ffffff', txt: '#cccccc', border: '#eeeeee'},
@@ -227,13 +215,10 @@
 
         function renderDashboard() {
             const data = globalData;
-            
-            // Estraggo la vera data dell'ultimo giorno presente in archivio (Ieri)
             let ultimoDato = data.storico_completo[data.storico_completo.length - 1].data;
             document.getElementById('last-update').innerText = "Dati certi ARPA aggiornati al: " + formatDDMM(ultimoDato);
             
             const diag = data.diagnosi_meteo;
-            // Se diag.giorni_da_evento è calcolato su Ieri, aggiungiamo +1 per farlo riferire a Oggi
             let ggDaEvento = diag.giorni_da_evento !== undefined ? (diag.giorni_da_evento + 1) : null;
             
             document.getElementById('siccita-text').innerHTML = `
@@ -245,18 +230,30 @@
             const zc = document.getElementById('zone-container');
             zc.innerHTML = '';
             
-            // Calcolo proiezione di OGGI (distanza = 1 dal dato di Ieri)
             data.zone.forEach(z => {
-                let pm = z.giorni_mancanti_al_picco; 
-                if(pm === undefined || pm === null) pm = 99;
+                let finalProj = 0;
+                let distDalDatoCerto = 1; 
                 
-                let dToP = (1 - pm); // Oggi è 1 giorno dopo "ieri"
-                let currentMax = z.indice_picco || 0; 
-                let todayProj = currentMax > 0 ? currentMax * Math.exp(- (dToP*dToP)/(2 * 4.84)) : 0;
+                if (z.onde && z.onde.length > 0) {
+                    z.onde.forEach(onda => {
+                        let dToP = (distDalDatoCerto - onda.giorni_mancanti_da_ieri);
+                        let picco = onda.indice_picco || 0;
+                        if (picco > 0) {
+                            finalProj += picco * Math.exp(- (dToP*dToP)/(2 * 4.84));
+                        }
+                    });
+                } else if (z.indice_picco !== undefined) {
+                    let pm = z.giorni_mancanti_al_picco || 99;
+                    let dToP = (1 - pm);
+                    finalProj = z.indice_picco * Math.exp(- (dToP*dToP)/(2 * 4.84));
+                }
                 
-                if (todayProj > 100) todayProj = 100;
-
-                let ind = todayProj || 0;
+                if (finalProj > 100) finalProj = 100;
+                let ind = finalProj || 0;
+                
+                let pRounded = Math.round(ind / 10) * 10;
+                let c = getHeatmapColor(pRounded);
+                
                 zc.innerHTML += `
                     <div class="zona-item">
                         <div class="zona-info">
@@ -264,7 +261,7 @@
                             <div class="zona-stato">${z.stato} (T: ${z.t_min_stimata}°/${z.t_max_stimata}°)</div>
                             <div class="btn-trovati" onclick="salvaRitrovamento('${z.zona}')">🍄 Trovati!</div>
                         </div>
-                        <div class="progress-circle" style="background-color: ${getColor(ind)}">
+                        <div class="progress-circle" style="background-color: ${c.bg}; color: ${c.txt}; border-color: ${c.border};">
                             ${Math.round(ind)}%
                         </div>
                     </div>`;
@@ -282,7 +279,7 @@
             new Chart(document.getElementById('meteoChart').getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: st.map(d => formatDDMM(d.data)), // Formattato DD/MM
+                    labels: st.map(d => formatDDMM(d.data)),
                     datasets: [
                         { label: 'Pioggia', data: st.map(d => d.pioggia_mm), backgroundColor: '#2196F3', yAxisID: 'y' },
                         { label: 'T.Max', data: st.map(d => d.t_max), borderColor: '#F44336', type: 'line', yAxisID: 'y1' }
@@ -292,11 +289,10 @@
             });
         }
 
-function renderCalendars() {
+        function renderCalendars() {
             const data = globalData;
             let diario = JSON.parse(localStorage.getItem('diario_funghi')) || {};
             
-            // --- CALENDARIO STORICO PASSATO ---
             const past = data.storico_completo.slice(-15).reverse();
             let pastHtml = '';
             past.forEach(d => {
@@ -312,12 +308,13 @@ function renderCalendars() {
             });
             document.getElementById('past-calendar').innerHTML = pastHtml;
 
-            // --- CALENDARIO HEATMAP (ONDE MULTIPLE) ---
+            // Aggiunto "CAM" per primo nella Heatmap
             let futureHtml = `
                 <div class="cal-row cal-header">
                     <div class="cal-date">Data</div>
                     <div class="cal-luna"></div>
                     <div class="future-zones">
+                        <div class="z-label">CAM</div>
                         <div class="z-label">B.SE</div>
                         <div class="z-label">B.NE</div>
                         <div class="z-label">FAG</div>
@@ -332,12 +329,10 @@ function renderCalendars() {
                 futureDate.setDate(oggi.getDate() + offset);
                 
                 let distDalDatoCerto = offset + 1; 
-                
                 let dots = '';
+                
                 data.zone.forEach((z) => {
                     let finalProj = 0;
-                    
-                    // Somma matematica di tutte le ondate (flush) attive per il giorno i-esimo
                     if (z.onde && z.onde.length > 0) {
                         z.onde.forEach(onda => {
                             let dToP = (distDalDatoCerto - onda.giorni_mancanti_da_ieri);
@@ -367,8 +362,7 @@ function renderCalendars() {
             document.getElementById('future-calendar').innerHTML = futureHtml;
         }
 
-async function loadOpenMeteo() {
-            // Aggiunto "windspeed_10m" all'URL per intercettare il vento secco
+        async function loadOpenMeteo() {
             const url = "https://api.open-meteo.com/v1/forecast?latitude=46.0770&longitude=9.2424&elevation=1222&hourly=temperature_2m,relative_humidity_2m,precipitation,windspeed_10m&timezone=Europe/Rome";
             
             try {
@@ -377,7 +371,6 @@ async function loadOpenMeteo() {
                 const data = await res.json();
                 const h = data.hourly;
                 
-                // Raggruppamento orario
                 let daysMap = {};
                 for(let i = 0; i < h.time.length; i++) {
                     let datePart = h.time[i].split('T')[0];
@@ -389,7 +382,7 @@ async function loadOpenMeteo() {
                     if(h.windspeed_10m && h.windspeed_10m[i] !== null) daysMap[datePart].winds.push(h.windspeed_10m[i]);
                 }
 
-                // Intestazione della Tabella Ibrida
+                // Camnasco rimosso dall'intestazione Meteo
                 let html = `
                     <div class="cal-row cal-header">
                         <div style="width: 45px;">Data</div>
@@ -416,17 +409,17 @@ async function loadOpenMeteo() {
                     let vMax = winds.length ? Math.round(Math.max(...winds)) : 0;
                     
                     let dataObj = new Date(date);
-                    let nomeGiorno = count === 0 ? "Oggi" : (count === 1 ? "Dom" : giorni[dataObj.getDay()]);
+                    let nomeGiorno = count === 0 ? "Oggi" : (count === 1 ? "Domani" : giorni[dataObj.getDay()]);
                     let icona = getMeteoIcon(parseFloat(pTot), vMax, tmin);
                     
-                    // --- CALCOLO HEATMAP INCROCIATA ---
-                    let distDalDatoCerto = count + 1; // 1 = Oggi, 2 = Domani, ecc.
+                    let distDalDatoCerto = count + 1; 
                     let dots = '';
                     
                     globalData.zone.forEach((z) => {
+                        // Salto esplicitamente Camnasco dalla generazione dei quadrati Meteo
+                        if (z.zona === "Camnasco") return; 
+
                         let finalProj = 0;
-                        
-                        // 1. Calcolo Base (Onde Matematiche ARPA)
                         if (z.onde && z.onde.length > 0) {
                             z.onde.forEach(onda => {
                                 let dToP = (distDalDatoCerto - onda.giorni_mancanti_da_ieri);
@@ -437,15 +430,9 @@ async function loadOpenMeteo() {
                             });
                         }
                         
-                        // 2. INCROCIO CON IL METEO: Penalità attive in tempo reale!
-                        if (tmin < 6) {
-                            finalProj *= 0.3; // Rischio gelata/freddo notturno: abbatte la crescita del 70%
-                        }
-                        if (vMax > 25 && pTot < 1.0) {
-                            finalProj *= 0.5; // Vento forte senza pioggia (Favonio): abbatte del 50%
-                        }
+                        if (tmin < 6) finalProj *= 0.3; 
+                        if (vMax > 25 && pTot < 1.0) finalProj *= 0.5; 
                         
-                        // Arrotondamento per i colori
                         let pRounded = Math.round(finalProj / 10) * 10;
                         if(pRounded > 100) pRounded = 100;
                         if(pRounded < 0) pRounded = 0;
@@ -455,7 +442,6 @@ async function loadOpenMeteo() {
                         dots += `<div class="future-dot" style="background-color: ${c.bg}; color: ${c.txt}; border-color: ${c.border};">${label}</div>`;
                     });
 
-                    // Generazione Grafica della riga
                     html += `
                         <div class="cal-row" style="padding: 12px 0;">
                             <div class="cal-date" style="width: 45px; font-size: 0.8rem; line-height: 1.2;">
