@@ -148,7 +148,9 @@ class AnalizzatoreSiccitaPorcini:
         return diag
 
 def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[Dict[str, Any]]:
+    # Inseriamo Camnasco per primo nella lista!
     zone_cfg = [
+        {"nome": "Camnasco", "quota": 750, "essenza": "castagno", "esposizione": "SE", "giorni_base": 6},
         {"nome": "Betulle SE", "quota": 1222, "essenza": "betulla", "esposizione": "SE", "giorni_base": 9},
         {"nome": "Betulle NE", "quota": 1144, "essenza": "betulla", "esposizione": "NE", "giorni_base": 8},
         {"nome": "Faggi Ovest", "quota": 1561, "essenza": "faggio", "esposizione": "OVEST_OMBRA", "giorni_base": 12},
@@ -164,6 +166,7 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         t_min_b = diag["t_min_attuale"] - gradiente
         t_max_b = diag["t_max_attuale"] - gradiente
         
+        rh_eff = diag["rh_media_attuale"]
         if z["esposizione"] == "SE":
             t_max_eff, t_min_eff, rh_eff = t_max_b + 2.5, t_min_b, max(0.0, diag["rh_media_attuale"] - 10.0)
         elif z["esposizione"] == "NE":
@@ -173,7 +176,11 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         elif z["esposizione"] == "NORD":
             t_max_eff, t_min_eff, rh_eff = t_max_b - 2.5, t_min_b - 1.5, min(100.0, diag["rh_media_attuale"] + 20.0)
         else:
-            t_max_eff, t_min_eff, rh_eff = t_max_b, t_min_b, diag["rh_media_attuale"]
+            t_max_eff, t_min_eff = t_max_b, t_min_b
+            
+        # Regola speciale per l'effetto "Sorgente" a Camnasco
+        if z["nome"] == "Camnasco":
+            rh_eff = max(60.0, rh_eff) # Umidità minima garantita
 
         t_opt = 16.5 if z["essenza"] not in ["pino", "faggio"] else 14.5
         t_media_eff = (t_max_eff + t_min_eff) / 2
@@ -188,10 +195,15 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         indice_totale = 0.0
         onde = []
         
-        # Somma le probabilità di TUTTE le ondate (Flush multipli)
         for ev in diag["eventi"]:
             f_R = 1.0 / (1.0 + math.exp(-0.12 * (ev["pioggia"] - ev["soglia"])))
-            picco_eff = z["giorni_base"] + ev["ritardo"]
+            
+            # Applicazione ritardo attenuata per Camnasco
+            ritardo_applicato = ev["ritardo"]
+            if z["nome"] == "Camnasco":
+                ritardo_applicato = min(1, ritardo_applicato)
+                
+            picco_eff = z["giorni_base"] + ritardo_applicato
             f_L = math.exp(- ((ev["giorni_da_evento"] - picco_eff) ** 2) / (2 * (2.2 ** 2)))
             
             ind_pieno = 100.0 * (f_R * (f_T_media * f_T_freddo) * 1.0 * f_H) * phi_vento * ev["smorzamento"]
@@ -205,7 +217,6 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
 
         indice_totale = min(100.0, indice_totale)
         
-        # Estrae i giorni mancanti al PROSSIMO picco
         futuri = [onda["giorni_mancanti_da_ieri"] for onda in onde if onda["giorni_mancanti_da_ieri"] > 0]
         giorni_mancanti = min(futuri) if futuri else (min([o["giorni_mancanti_da_ieri"] for o in onde]) if onde else 0)
         
