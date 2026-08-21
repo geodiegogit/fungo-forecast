@@ -1,5 +1,5 @@
 {
-  "ultimo_aggiornamento": "2026-08-21 03:38:32",
+  "ultimo_aggiornamento": "2026-08-21 09:22:58",
   "stazione": {
     "id": "1545",
     "nome": "San Siro",
@@ -37,6 +37,24 @@
     "ritardo_siccita_applicato": 0
   },
   "zone": [
+    {
+      "zona": "Camnasco",
+      "indice_buttata": 35.1,
+      "t_min_stimata": 16.3,
+      "t_max_stimata": 23.6,
+      "giorni_mancanti_al_picco": 2,
+      "stato": "Incubazione (prossimo picco in 2 gg)",
+      "onde": [
+        {
+          "giorni_mancanti_da_ieri": 2,
+          "indice_picco": 51.0
+        },
+        {
+          "giorni_mancanti_da_ieri": 6,
+          "indice_picco": 55.2
+        }
+      ]
+    },
     {
       "zona": "Betulle SE",
       "indice_buttata": 6.2,
