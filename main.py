@@ -1,13 +1,20 @@
+import json
+import math
+from datetime import datetime, timedelta
+from typing import List, Dict, Any
+
 class AnalizzatoreSiccitaPorcini:
     def __init__(self, soglia_evento: float = 35.0):
         self.soglia_evento = soglia_evento
 
     def analizza(self, serie: List[Dict[str, Any]]) -> Dict[str, Any]:
+        if not serie:
+            return {"evento_rilevato": False, "stato": "In attesa di dati"}
+
         n = len(serie)
         giorno_ieri = serie[-1]
         
         eventi_trovati = []
-        
         i = 2
         while i < n:
             c3 = sum(serie[k]["pioggia_mm"] for k in range(i - 2, i + 1))
@@ -19,21 +26,14 @@ class AnalizzatoreSiccitaPorcini:
                 if not eventi_trovati or (idx - eventi_trovati[-1]["indice"]) >= 4:
                     p_pre_30 = sum(serie[k]["pioggia_mm"] for k in range(max(0, idx - 32), max(0, idx - 2)))
                     
-                    # --- NUOVA LOGICA: SENESCENZA E TERRENO IDROFUGO ---
                     if p_pre_30 < 15.0:
-                        # Siccità estrema: terreno impermeabile e blocco simbiosi (piante senza foglie)
-                        # Applichiamo 12 giorni di ritardo e distruggiamo il potenziale al 30% (serve solo a far bere le piante)
                         ritardo, soglia, smorz = 12, 60.0, 0.30 
-                        stress_estremo = True
                     elif 15.0 <= p_pre_30 < 30.0:
                         ritardo, soglia, smorz = 7, 50.0, 0.70
-                        stress_estremo = False
                     elif 30.0 <= p_pre_30 < 60.0: 
                         ritardo, soglia, smorz = 3, 40.0, 0.90
-                        stress_estremo = False
                     else: 
                         ritardo, soglia, smorz = 0, 35.0, 1.00
-                        stress_estremo = False
 
                     giorni_da_ev = (n - 1) - idx
                     
@@ -50,8 +50,7 @@ class AnalizzatoreSiccitaPorcini:
                         "giorni_da_evento": giorni_da_ev,
                         "ritardo": ritardo,
                         "soglia": soglia,
-                        "smorzamento": smorz * danno_favonio,
-                        "stress_idrico": stress_estremo
+                        "smorzamento": smorz * danno_favonio
                     })
                 i += 3 
             else:
@@ -59,13 +58,18 @@ class AnalizzatoreSiccitaPorcini:
 
         eventi_trovati = [ev for ev in eventi_trovati if ev["giorni_da_evento"] <= 40]
 
+        storico_recente = serie[-90:]
+        notti_tropicali = sum(1 for d in storico_recente if d.get("t_min", 0) >= 19.0)
+        rischio_senescenza = notti_tropicali >= 2
+
         diag = {
             "t_max_attuale": giorno_ieri["t_max"],
             "t_min_attuale": giorno_ieri["t_min"],
             "rh_media_attuale": giorno_ieri["rh_media"],
             "vento_max_attuale": giorno_ieri["vento_max"],
             "pioggia_oggi": giorno_ieri["pioggia_mm"], 
-            "eventi": eventi_trovati
+            "eventi": eventi_trovati,
+            "rischio_senescenza": rischio_senescenza
         }
         
         if not eventi_trovati:
@@ -76,8 +80,7 @@ class AnalizzatoreSiccitaPorcini:
                 "evento_rilevato": True,
                 "data_evento": ev_recente["data"],
                 "giorni_da_evento": ev_recente["giorni_da_evento"],
-                "ritardo_siccita_applicato": ev_recente["ritardo"],
-                "stress_estremo": ev_recente["stress_idrico"]
+                "ritardo_siccita_applicato": ev_recente["ritardo"]
             })
         return diag
 
@@ -114,14 +117,14 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         if z["nome"] == "Camnasco":
             rh_eff = max(60.0, rh_eff) 
 
+        if z["nome"] == "Faggi Ovest":
+            t_min_eff += 1.0 
+
         t_opt = 16.5 if z["essenza"] not in ["pino", "faggio"] else 14.5
         t_media_eff = (t_max_eff + t_min_eff) / 2
         f_T_media = math.exp(- ((t_media_eff - t_opt) ** 2) / (2 * (3.5 ** 2)))
         f_T_freddo = 0.0 if t_min_eff < 3.0 else ((t_min_eff - 3.0) / 4.0 if t_min_eff < 7.0 else 1.0)
         
-        # --- NUOVA LOGICA: IL GRILLETTO TERMICO ---
-        # Se la temperatura minima è tra 8 e 13 gradi, si innesca il corpo fruttifero (Boost del 30%)
-        # Se fa ancora troppo caldo (sopra i 17 gradi), il fungo si impigrisce (Penalità)
         if 8.0 <= t_min_eff <= 13.0:
             f_grilletto = 1.3
         elif t_min_eff > 17.0:
@@ -133,7 +136,11 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         
         vento = diag["vento_max_attuale"]
         is_favonio = (vento > 20 and diag["rh_media_attuale"] < 60 and diag["pioggia_oggi"] < 1.0)
-        phi_vento = max(0.1, 1.0 - 0.04 * (vento - 20)) if is_favonio else 1.0
+        
+        if z["nome"] == "Faggi Ovest":
+            phi_vento = 1.0
+        else:
+            phi_vento = max(0.1, 1.0 - 0.04 * (vento - 20)) if is_favonio else 1.0
         
         indice_totale = 0.0
         onde = []
@@ -143,7 +150,6 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
             
             ritardo_applicato = ev["ritardo"]
             if z["nome"] == "Camnasco":
-                # Camnasco (sorgente) non va mai in stress idrico profondo
                 ritardo_applicato = min(1, ritardo_applicato) 
                 
             picco_eff = z["giorni_base"] + ritardo_applicato
@@ -153,6 +159,7 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
             ind_oggi = ind_pieno * f_L
             
             indice_totale += ind_oggi
+            onde.oidse = True # placeholder
             onde.append({
                 "giorni_mancanti_da_ieri": round(picco_eff - ev["giorni_da_evento"], 1),
                 "indice_picco": round(ind_pieno, 1)
@@ -163,10 +170,9 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         futuri = [onda["giorni_mancanti_da_ieri"] for onda in onde if onda["giorni_mancanti_da_ieri"] > 0]
         giorni_mancanti = min(futuri) if futuri else (min([o["giorni_mancanti_da_ieri"] for o in onde]) if onde else 0)
         
-        if f_T_freddo == 0.0: stato = "Blocco da freddo notturno"
-        elif diag.get("stress_estremo") and z["nome"] != "Camnasco": stato = "Alberi in stress: Simbiosi debole"
+        if f_T_freddo == 0.0: stato = "Blocco freddo"
         elif indice_totale > 65: stato = "Buttata in corso (Onde multiple)" if len(onde)>1 else "Buttata in corso"
-        elif giorni_mancanti > 0: stato = f"Incubazione (prossimo picco in {giorni_mancanti} gg)"
+        elif giorni_mancanti > 0: stato = f"Incubazione ({giorni_mancanti} gg)"
         else: stato = "In esaurimento"
 
         res.append({
@@ -179,3 +185,46 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
             "onde": onde
         })
     return res
+
+if __name__ == "__main__":
+    # Caricamento storico esistente o creazione di un set di dati di fallback se vuoto
+    try:
+        with open("data/storico.json", "r") as f:
+            storico = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        storico = []
+
+    # Se lo storico è vuoto, creiamo qualche dato fittizio recente per consentire al workflow di girare subito
+    if not storico:
+        oggi = datetime.now()
+        for i in range(15, 0, -1):
+            d_str = (oggi - timedelta(days=i)).strftime("%Y-%m-%d")
+            storico.append({
+                "data": d_str,
+                "t_max": 22.0,
+                "t_min": 14.0,
+                "pioggia_mm": 5.0 if i == 5 else 0.0,
+                "vento_max": 10.0,
+                "rh_media": 75.0
+            })
+
+    storico_unito = {d["data"]: d for d in storico if "data" in d}
+    storico_ordinato = sorted(storico_unito.values(), key=lambda x: x["data"])
+    storico_finale = storico_ordinato[-90:]
+
+    analizzatore = AnalizzatoreSiccitaPorcini()
+    diagnosi = analizzatore.analizza(storico_finale)
+    microzone = calcola_microzone(diagnosi)
+    
+    output = {
+        "ultimo_aggiornamento": datetime.now().isoformat(),
+        "diagnosi_meteo": diagnosi,
+        "zone": microzone,
+        "storico_completo": storico_finale
+    }
+    
+    with open("data/previsioni.json", "w") as f:
+        json.dump(output, f, indent=4)
+        
+    with open("data/storico.json", "w") as f:
+        json.dump(storico_finale, f, indent=4)
