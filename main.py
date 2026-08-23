@@ -1,7 +1,79 @@
+import os
 import json
 import math
+import requests
+import pandas as pd
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
+from typing import Dict, List, Any
+
+ENDPOINT_SENSORS_ANAGRAFICA = "https://www.dati.lombardia.it/resource/nf78-nj6b.json"
+ENDPOINT_METEO_DATA = "https://www.dati.lombardia.it/resource/647i-nhxk.json"
+ID_STAZIONE = "1545"
+
+def get_sensor_ids_for_station(id_stazione: str) -> Dict[str, str]:
+    params = {"$where": f"idstazione = '{id_stazione}'", "$limit": 50}
+    response = requests.get(ENDPOINT_SENSORS_ANAGRAFICA, params=params, timeout=20)
+    response.raise_for_status()
+    mappa = {}
+    for s in response.json():
+        tipo = s.get("tipologia", "").lower()
+        ids = s.get("idsensore")
+        if "precipitazione" in tipo: mappa["pioggia"] = ids
+        elif "temperatura" in tipo: mappa["temperatura"] = ids
+        elif "umidit" in tipo: mappa["umidita"] = ids
+        elif "vento" in tipo or "velocit" in tipo: mappa["vento"] = ids
+    return mappa
+
+def download_weather_history(mappa_sensori: Dict[str, str], days: int = 45) -> pd.DataFrame:
+    start_date = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00")
+    id_list = "','".join(mappa_sensori.values())
+    params = {
+        "$where": f"idsensore in ('{id_list}') AND data >= '{start_date}' AND valore != -9999",
+        "$limit": 50000, "$order": "data ASC"
+    }
+    response = requests.get(ENDPOINT_METEO_DATA, params=params, timeout=30)
+    response.raise_for_status()
+    records = response.json()
+    if not records: return pd.DataFrame()
+    df = pd.DataFrame(records)
+    df["data"] = pd.to_datetime(df["data"])
+    df["valore"] = pd.to_numeric(df["valore"], errors="coerce")
+    inv_map = {v: k for k, v in mappa_sensori.items()}
+    df["tipo"] = df["idsensore"].map(inv_map)
+    return df.pivot_table(index="data", columns="tipo", values="valore", aggfunc="mean").reset_index()
+
+def aggregate_daily(df_hourly: pd.DataFrame) -> List[Dict[str, Any]]:
+    if df_hourly.empty: return []
+    
+    df_hourly["giorno"] = df_hourly["data"].dt.strftime("%Y-%m-%d")
+    oggi_str = datetime.now().strftime("%Y-%m-%d")
+    df_hourly = df_hourly[df_hourly["giorno"] < oggi_str]
+    
+    if df_hourly.empty: return []
+
+    agg_rules = {}
+    if "pioggia" in df_hourly.columns: agg_rules["pioggia"] = "sum"
+    if "umidita" in df_hourly.columns: agg_rules["umidita"] = "mean"
+    if "vento" in df_hourly.columns: agg_rules["vento"] = "max"
+    if "temperatura" in df_hourly.columns: agg_rules["temperatura"] = ["mean", "max", "min"]
+    
+    df_daily = df_hourly.groupby("giorno").agg(agg_rules)
+    df_daily.columns = ['_'.join(col).strip() for col in df_daily.columns.values]
+    df_daily = df_daily.reset_index()
+
+    serie = []
+    for _, row in df_daily.iterrows():
+        vento_kmh = row.get("vento_max", 0.0) * 3.6 if pd.notna(row.get("vento_max")) else 10.0
+        serie.append({
+            "data": row["giorno"],
+            "pioggia_mm": round(float(row.get("pioggia_sum", 0.0)), 1),
+            "t_media": round(float(row.get("temperatura_mean", 15.0)), 1),
+            "t_max": round(float(row.get("temperatura_max", 15.0)), 1),
+            "t_min": round(float(row.get("temperatura_min", 15.0)), 1),
+            "rh_media": round(float(row.get("umidita_mean", 70.0)), 1),
+            "vento_max": round(float(vento_kmh), 1)
+        })
+    return serie
 
 class AnalizzatoreSiccitaPorcini:
     def __init__(self, soglia_evento: float = 35.0):
@@ -9,7 +81,7 @@ class AnalizzatoreSiccitaPorcini:
 
     def analizza(self, serie: List[Dict[str, Any]]) -> Dict[str, Any]:
         if not serie:
-            return {"evento_rilevato": False, "stato": "In attesa di dati"}
+            return {"evento_rilevato": False, "stato": "In attesa di dati ARPA"}
 
         n = len(serie)
         giorno_ieri = serie[-1]
@@ -26,14 +98,11 @@ class AnalizzatoreSiccitaPorcini:
                 if not eventi_trovati or (idx - eventi_trovati[-1]["indice"]) >= 4:
                     p_pre_30 = sum(serie[k]["pioggia_mm"] for k in range(max(0, idx - 32), max(0, idx - 2)))
                     
-                    if p_pre_30 < 15.0:
-                        ritardo, soglia, smorz = 12, 60.0, 0.30 
-                    elif 15.0 <= p_pre_30 < 30.0:
-                        ritardo, soglia, smorz = 7, 50.0, 0.70
-                    elif 30.0 <= p_pre_30 < 60.0: 
-                        ritardo, soglia, smorz = 3, 40.0, 0.90
-                    else: 
-                        ritardo, soglia, smorz = 0, 35.0, 1.00
+                    # Calcolo biologico del potenziale post-siccità
+                    if p_pre_30 < 15.0: ritardo, soglia, smorz = 12, 60.0, 0.30 
+                    elif 15.0 <= p_pre_30 < 30.0: ritardo, soglia, smorz = 7, 50.0, 0.70
+                    elif 30.0 <= p_pre_30 < 60.0: ritardo, soglia, smorz = 3, 40.0, 0.90
+                    else: ritardo, soglia, smorz = 0, 35.0, 1.00
 
                     giorni_da_ev = (n - 1) - idx
                     
@@ -58,8 +127,8 @@ class AnalizzatoreSiccitaPorcini:
 
         eventi_trovati = [ev for ev in eventi_trovati if ev["giorni_da_evento"] <= 40]
 
-        storico_recente = serie[-90:]
-        notti_tropicali = sum(1 for d in storico_recente if d.get("t_min", 0) >= 19.0)
+        # Sensore Notti Tropicali su tutto l'archivio (fino a 90 gg)
+        notti_tropicali = sum(1 for d in serie if d.get("t_min", 0) >= 19.0)
         rischio_senescenza = notti_tropicali >= 2
 
         diag = {
@@ -114,33 +183,28 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         else:
             t_max_eff, t_min_eff = t_max_b, t_min_b
             
-        if z["nome"] == "Camnasco":
-            rh_eff = max(60.0, rh_eff) 
-
-        if z["nome"] == "Faggi Ovest":
-            t_min_eff += 1.0 
+        # Correzioni speciali ecosistemi
+        if z["nome"] == "Camnasco": rh_eff = max(60.0, rh_eff) 
+        if z["nome"] == "Faggi Ovest": t_min_eff += 1.0 
 
         t_opt = 16.5 if z["essenza"] not in ["pino", "faggio"] else 14.5
         t_media_eff = (t_max_eff + t_min_eff) / 2
         f_T_media = math.exp(- ((t_media_eff - t_opt) ** 2) / (2 * (3.5 ** 2)))
         f_T_freddo = 0.0 if t_min_eff < 3.0 else ((t_min_eff - 3.0) / 4.0 if t_min_eff < 7.0 else 1.0)
         
-        if 8.0 <= t_min_eff <= 13.0:
-            f_grilletto = 1.3
-        elif t_min_eff > 17.0:
-            f_grilletto = 0.7
-        else:
-            f_grilletto = 1.0
+        # Grilletto termico
+        if 8.0 <= t_min_eff <= 13.0: f_grilletto = 1.3
+        elif t_min_eff > 17.0: f_grilletto = 0.7
+        else: f_grilletto = 1.0
 
         f_H = 1.0 if rh_eff >= 85 else (0.0 if rh_eff < 40 else ((rh_eff - 40) / 45) ** 1.2)
         
         vento = diag["vento_max_attuale"]
         is_favonio = (vento > 20 and diag["rh_media_attuale"] < 60 and diag["pioggia_oggi"] < 1.0)
         
-        if z["nome"] == "Faggi Ovest":
-            phi_vento = 1.0
-        else:
-            phi_vento = max(0.1, 1.0 - 0.04 * (vento - 20)) if is_favonio else 1.0
+        # Sant'Amate è protetta dal catino roccioso
+        if z["nome"] == "Faggi Ovest": phi_vento = 1.0
+        else: phi_vento = max(0.1, 1.0 - 0.04 * (vento - 20)) if is_favonio else 1.0
         
         indice_totale = 0.0
         onde = []
@@ -149,8 +213,7 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
             f_R = 1.0 / (1.0 + math.exp(-0.12 * (ev["pioggia"] - ev["soglia"])))
             
             ritardo_applicato = ev["ritardo"]
-            if z["nome"] == "Camnasco":
-                ritardo_applicato = min(1, ritardo_applicato) 
+            if z["nome"] == "Camnasco": ritardo_applicato = min(1, ritardo_applicato) 
                 
             picco_eff = z["giorni_base"] + ritardo_applicato
             f_L = math.exp(- ((ev["giorni_da_evento"] - picco_eff) ** 2) / (2 * (2.2 ** 2)))
@@ -159,7 +222,6 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
             ind_oggi = ind_pieno * f_L
             
             indice_totale += ind_oggi
-            onde.oidse = True # placeholder
             onde.append({
                 "giorni_mancanti_da_ieri": round(picco_eff - ev["giorni_da_evento"], 1),
                 "indice_picco": round(ind_pieno, 1)
@@ -186,45 +248,52 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         })
     return res
 
-if __name__ == "__main__":
-    # Caricamento storico esistente o creazione di un set di dati di fallback se vuoto
+def main():
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Connessione ARPA...")
+    sensori = get_sensor_ids_for_station(ID_STAZIONE)
+    df_orari = download_weather_history(sensori, days=45)
+    nuovi_dati = aggregate_daily(df_orari)
+    
+    if not nuovi_dati:
+        print("Errore: nessun dato scaricato da ARPA.")
+        return
+
+    # Carichiamo il vecchio storico (se esiste) per allungare la memoria dell'app
+    storico_esistente = []
     try:
-        with open("data/storico.json", "r") as f:
-            storico = json.load(f)
+        if os.path.exists("data/storico.json"):
+            with open("data/storico.json", "r") as f:
+                storico_esistente = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        storico = []
+        pass
 
-    # Se lo storico è vuoto, creiamo qualche dato fittizio recente per consentire al workflow di girare subito
-    if not storico:
-        oggi = datetime.now()
-        for i in range(15, 0, -1):
-            d_str = (oggi - timedelta(days=i)).strftime("%Y-%m-%d")
-            storico.append({
-                "data": d_str,
-                "t_max": 22.0,
-                "t_min": 14.0,
-                "pioggia_mm": 5.0 if i == 5 else 0.0,
-                "vento_max": 10.0,
-                "rh_media": 75.0
-            })
-
-    storico_unito = {d["data"]: d for d in storico if "data" in d}
+    # Fusione dei dati: sovrascrive i giorni duplicati aggiornandoli e tiene i vecchi
+    storico_unito = {d["data"]: d for d in storico_esistente if "data" in d}
+    for d in nuovi_dati:
+        storico_unito[d["data"]] = d
+        
+    # Ordiniamo cronologicamente e teniamo gli ultimi 90 giorni
     storico_ordinato = sorted(storico_unito.values(), key=lambda x: x["data"])
     storico_finale = storico_ordinato[-90:]
 
     analizzatore = AnalizzatoreSiccitaPorcini()
     diagnosi = analizzatore.analizza(storico_finale)
-    microzone = calcola_microzone(diagnosi)
-    
+    previsioni = calcola_microzone(diagnosi)
+
     output = {
-        "ultimo_aggiornamento": datetime.now().isoformat(),
+        "ultimo_aggiornamento": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "stazione": {"id": ID_STAZIONE, "nome": "San Siro", "quota_m": 1285},
         "diagnosi_meteo": diagnosi,
-        "zone": microzone,
+        "zone": previsioni,
         "storico_completo": storico_finale
     }
-    
-    with open("data/previsioni.json", "w") as f:
-        json.dump(output, f, indent=4)
+
+    os.makedirs("data", exist_ok=True)
+    with open("data/previsioni.json", "w", encoding="utf-8") as f:
+        json.dump(output, f, ensure_ascii=False, indent=2)
         
-    with open("data/storico.json", "w") as f:
-        json.dump(storico_finale, f, indent=4)
+    with open("data/storico.json", "w", encoding="utf-8") as f:
+        json.dump(storico_finale, f, ensure_ascii=False, indent=2)
+
+if __name__ == "__main__":
+    main()
