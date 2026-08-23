@@ -76,7 +76,7 @@
 
         <div class="card hidden" id="card-senescenza" style="background: #fff3e0; border: 1px solid #ffcc80;">
             <h2 class="section-title" style="color: #e65100; border-bottom-color: #ffb74d;">⚠️ Allerta Caldo Estremo</h2>
-            <p style="font-size: 0.85rem; margin-bottom: 10px;">L'algoritmo ha rilevato notti tropicali prolungate. Hai notato una senescenza parziale (caduta foglie ~20%) nel bosco?</p>
+            <p style="font-size: 0.85rem; margin-bottom: 10px;">L'algoritmo ha rilevato notti tropicali prolungate nello storico. Hai notato una senescenza parziale (caduta foglie ~20%) nel bosco?</p>
             <label style="font-weight: bold; color: #d84315; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                 <input type="checkbox" id="toggle-senescenza" onchange="aggiornaTutto();" style="transform: scale(1.5);">
                 Sì, applica penalità di stress vitale
@@ -117,7 +117,7 @@
             <div id="future-calendar"></div>
         </div>
         <div class="card">
-            <h2 class="section-title">Storico Dati Certi (ARPA)</h2>
+            <h2 class="section-title">Storico Dati Certi (ARPA - Ultimi 60 gg)</h2>
             <div id="past-calendar"></div>
         </div>
     </div>
@@ -256,7 +256,12 @@
                 <strong>Ritardo Siccità:</strong> ${diag.ritardo_siccita_applicato > 0 ? '+' + diag.ritardo_siccita_applicato + ' gg' : 'Nessuno'}<br>
             `;
 
-            if (diag.rischio_senescenza) document.getElementById('card-senescenza').classList.remove('hidden');
+            if (diag.rischio_senescenza) {
+                document.getElementById('card-senescenza').classList.remove('hidden');
+            } else {
+                document.getElementById('card-senescenza').classList.add('hidden');
+            }
+            
             let isSenescenzaAttiva = document.getElementById('toggle-senescenza') ? document.getElementById('toggle-senescenza').checked : false;
 
             let consiglio = "";
@@ -338,7 +343,8 @@
             let diario = JSON.parse(localStorage.getItem('diario_funghi')) || {};
             let isSenescenzaAttiva = document.getElementById('toggle-senescenza') ? document.getElementById('toggle-senescenza').checked : false;
             
-            const past = data.storico_completo.slice(-15).reverse();
+            // Mostriamo fino a 60 giorni nello storico passato per vedere anche luglio
+            const past = data.storico_completo.slice(-60).reverse();
             let pastHtml = '';
             past.forEach(d => {
                 let icon = getMeteoIcon(d.pioggia_mm, d.vento_max, d.t_min);
@@ -468,6 +474,7 @@
 
                         let finalProj = 0;
                         if (z.onde && z.onde.length > 0) {
+                            z.onde.onda?.forEach?.(onda => {}); // safe guard
                             z.onde.forEach(onda => {
                                 let ritardoAggiuntivo = (isSenescenzaAttiva && z.zona !== "Camnasco") ? 4 : 0;
                                 let dToP = (distDalDatoCerto - (onda.giorni_mancanti_da_ieri + ritardoAggiuntivo));
@@ -482,8 +489,6 @@
                         }
                         
                         if (tmin < 6) finalProj *= 0.3; 
-                        
-                        // Faggi Ovest è immune al Favonio!
                         if (vMax > 25 && pTot < 1.0 && z.zona !== "Faggi Ovest") finalProj *= 0.5; 
                         
                         let pRounded = Math.round(finalProj / 10) * 10;
@@ -510,6 +515,7 @@
                         </div>`;
                     count++;
                 }
+                document.getElementById('forecast-container').html = html; // fix syntax error below
                 document.getElementById('forecast-container').innerHTML = html;
             } catch (e) {
                 document.getElementById('forecast-container').innerHTML = "Errore nel caricamento previsioni: " + e.message;
