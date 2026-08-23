@@ -52,8 +52,6 @@
         .future-zones { display: flex; gap: 4px; justify-content: flex-end; flex-grow: 1; }
         .z-label { width: 38px; text-align: center; }
         .future-dot { width: 38px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; border: 1px solid #e0e0e0;}
-
-        .forecast-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
         
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
         .nav-btn { flex: 1; padding: 15px 0; text-align: center; background: none; border: none; font-size: 1rem; color: var(--text-light); font-weight: bold; }
@@ -69,16 +67,34 @@
         <div class="update-time" id="last-update">Aggiornamento...</div>
     </header>
 
-    <!-- TAB 1: DASHBOARD -->
     <div class="container" id="tab-dashboard">
+        
         <div class="card">
             <h2 class="section-title">Stato Terreno & Siccità (Fino a Ieri)</h2>
             <div id="siccita-text" style="font-size: 0.9rem; line-height: 1.4;">Caricamento...</div>
         </div>
+
+        <div class="card hidden" id="card-senescenza" style="background: #fff3e0; border: 1px solid #ffcc80;">
+            <h2 class="section-title" style="color: #e65100; border-bottom-color: #ffb74d;">⚠️ Allerta Caldo Estremo</h2>
+            <p style="font-size: 0.85rem; margin-bottom: 10px;">L'algoritmo ha rilevato notti tropicali prolungate. Hai notato una senescenza parziale (caduta foglie ~20%) nel bosco?</p>
+            <label style="font-weight: bold; color: #d84315; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="toggle-senescenza" onchange="aggiornaTutto();" style="transform: scale(1.5);">
+                Sì, applica penalità di stress vitale
+            </label>
+        </div>
+
+        <div class="card" style="background: #e8f5e9; border: 1px solid #c8e6c9;">
+            <h2 class="section-title" style="color: #1b5e20; border-bottom-color: #a5d6a7;">🧭 Il Consiglio del Fungiatt</h2>
+            <div id="consiglio-text" style="font-size: 0.95rem; line-height: 1.5; color: #2e7d32; font-style: italic;">
+                Analizzo il bosco...
+            </div>
+        </div>
+
         <div class="card">
             <h2 class="section-title">Indice di Buttata Oggi (Proiezione)</h2>
             <div id="zone-container"></div>
         </div>
+        
         <div class="card">
             <h2 class="section-title">Meteo Stazione Ieri (1285m)</h2>
             <div class="meteo-grid">
@@ -94,11 +110,10 @@
         </div>
     </div>
 
-    <!-- TAB 2: CALENDARIO -->
     <div class="container hidden" id="tab-calendario">
         <div class="card">
             <h2 class="section-title">Proiezione a 15 Giorni</h2>
-            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">Parte da oggi. Calcolo matematico sull'ultima pioggia.</p>
+            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">Calcolo matematico dinamico sulle onde di buttata.</p>
             <div id="future-calendar"></div>
         </div>
         <div class="card">
@@ -107,18 +122,14 @@
         </div>
     </div>
 
-    <!-- TAB 3: PREVISIONI METEO -->
     <div class="container hidden" id="tab-meteo">
         <div class="card">
             <h2 class="section-title">Meteo 4 Giorni (Open-Meteo)</h2>
-            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">
-                Dati orari centrati su Betulle Sud-Est (Quota 1.222m). 
-            </p>
+            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">Dati orari centrati su Betulle Sud-Est (Quota 1.222m).</p>
             <div id="forecast-container">Caricamento previsioni in corso...</div>
         </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION -->
     <div class="bottom-nav">
         <button class="nav-btn active" onclick="switchTab('dashboard')" id="btn-dashboard">📊 Oggi</button>
         <button class="nav-btn" onclick="switchTab('calendario')" id="btn-calendario">📅 Heatmap</button>
@@ -180,12 +191,31 @@
             try {
                 const response = await fetch(DATA_URL + '?t=' + new Date().getTime());
                 globalData = await response.json();
-                renderDashboard();
-                renderCalendars();
-                loadOpenMeteo(); 
+                aggiornaTutto(); 
+                
+                const st = globalData.storico_completo.slice(-10);
+                new Chart(document.getElementById('meteoChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: st.map(d => formatDDMM(d.data)),
+                        datasets: [
+                            { label: 'Pioggia', data: st.map(d => d.pioggia_mm), backgroundColor: '#2196F3', yAxisID: 'y' },
+                            { label: 'T.Max', data: st.map(d => d.t_max), borderColor: '#F44336', type: 'line', yAxisID: 'y1' }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { position: 'left' }, y1: { position: 'right' } } }
+                });
+
             } catch (error) {
                 document.getElementById('siccita-text').innerHTML = "<b>Errore connessione.</b>";
             }
+        }
+
+        function aggiornaTutto() {
+            if(!globalData) return;
+            renderDashboard();
+            renderCalendars();
+            loadOpenMeteo();
         }
 
         function switchTab(tab) {
@@ -195,7 +225,6 @@
             document.getElementById('btn-' + tab).classList.add('active');
         }
 
-        // Funzione Unica per i Colori
         function getHeatmapColor(p) {
             const colors = {
                 0:   {bg: '#ffffff', txt: '#cccccc', border: '#eeeeee'},
@@ -227,6 +256,34 @@
                 <strong>Ritardo Siccità:</strong> ${diag.ritardo_siccita_applicato > 0 ? '+' + diag.ritardo_siccita_applicato + ' gg' : 'Nessuno'}<br>
             `;
 
+            if (diag.rischio_senescenza) document.getElementById('card-senescenza').classList.remove('hidden');
+            let isSenescenzaAttiva = document.getElementById('toggle-senescenza') ? document.getElementById('toggle-senescenza').checked : false;
+
+            let consiglio = "";
+            let tmin = diag.t_min_attuale;
+            let vento = diag.vento_max_attuale;
+            let rh = diag.rh_media_attuale;
+
+            if (isSenescenzaAttiva && ggDaEvento !== null) {
+                consiglio = "🍂 Il bosco è in senescenza parziale. Le betulle stanno risparmiando energia. La buttata sarà ritardata e meno intensa del solito, concentrati sulle zone più umide.";
+            } else if (ggDaEvento === null) {
+                consiglio = "Il bosco è secco e in attesa. 🍂 L'unica speranza è cercare le zone con sorgenti sotterranee (Camnasco) o aspettare la pioggia.";
+            } else if (tmin < 6) {
+                consiglio = "Fa frècc di notte! 🥶 Lascia perdere le cime alte. Stai sotto i 1000m nei boschi ben esposti al sole (Sud/Sud-Est) per trovare l'habitat giusto.";
+            } else if (vento > 25 && rh < 55) {
+                consiglio = "Attento al vento secco! 💨 Ha asciugato i versanti aperti. Cerca rifugio nell'anfiteatro dei Faggi a Ovest (Sant'Amate) che è protetto dal Favonio.";
+            } else if (ggDaEvento <= 5) {
+                consiglio = "La buttata si sta svegliando! 🌱 L'onda parte dal basso: punta tra i 700 e i 950m tra castagni e betulle, cercando i versanti baciati dal sole (Sud-Est).";
+            } else if (ggDaEvento > 5 && ggDaEvento <= 9) {
+                consiglio = "Siamo nel momento d'oro delle quote medie! 🍄 Esplora tra i 1000m e i 1300m (betulle e primi faggi). Le esposizioni Est e Sud-Est sono il top.";
+            } else if (ggDaEvento > 9 && ggDaEvento <= 14) {
+                consiglio = "L'onda sta salendo! 🌲 Le quote basse si asciugano. Spostati sui 1400-1500m nei faggi, provando anche le zone fresche a Nord-Est.";
+            } else {
+                consiglio = "Siamo a fine ciclo. I funghi superstiti li trovi in alto (sopra i 1500m), nei boschi bui o protetti dai pini (habitat del Pinophilus). 🏔️";
+            }
+            
+            document.getElementById('consiglio-text').innerHTML = consiglio;
+
             const zc = document.getElementById('zone-container');
             zc.innerHTML = '';
             
@@ -236,16 +293,16 @@
                 
                 if (z.onde && z.onde.length > 0) {
                     z.onde.forEach(onda => {
-                        let dToP = (distDalDatoCerto - onda.giorni_mancanti_da_ieri);
+                        let ritardoAggiuntivo = (isSenescenzaAttiva && z.zona !== "Camnasco") ? 4 : 0;
+                        let dToP = (distDalDatoCerto - (onda.giorni_mancanti_da_ieri + ritardoAggiuntivo));
+                        
                         let picco = onda.indice_picco || 0;
+                        if (isSenescenzaAttiva && z.zona !== "Camnasco") picco *= 0.6; 
+
                         if (picco > 0) {
                             finalProj += picco * Math.exp(- (dToP*dToP)/(2 * 4.84));
                         }
                     });
-                } else if (z.indice_picco !== undefined) {
-                    let pm = z.giorni_mancanti_al_picco || 99;
-                    let dToP = (1 - pm);
-                    finalProj = z.indice_picco * Math.exp(- (dToP*dToP)/(2 * 4.84));
                 }
                 
                 if (finalProj > 100) finalProj = 100;
@@ -274,24 +331,12 @@
                 document.getElementById('m-pioggia').innerText = ieri.pioggia_mm + " mm";
                 document.getElementById('m-vento').innerText = ieri.vento_max + " km/h";
             }
-
-            const st = data.storico_completo.slice(-10);
-            new Chart(document.getElementById('meteoChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: st.map(d => formatDDMM(d.data)),
-                    datasets: [
-                        { label: 'Pioggia', data: st.map(d => d.pioggia_mm), backgroundColor: '#2196F3', yAxisID: 'y' },
-                        { label: 'T.Max', data: st.map(d => d.t_max), borderColor: '#F44336', type: 'line', yAxisID: 'y1' }
-                    ]
-                },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { position: 'left' }, y1: { position: 'right' } } }
-            });
         }
 
         function renderCalendars() {
             const data = globalData;
             let diario = JSON.parse(localStorage.getItem('diario_funghi')) || {};
+            let isSenescenzaAttiva = document.getElementById('toggle-senescenza') ? document.getElementById('toggle-senescenza').checked : false;
             
             const past = data.storico_completo.slice(-15).reverse();
             let pastHtml = '';
@@ -308,7 +353,6 @@
             });
             document.getElementById('past-calendar').innerHTML = pastHtml;
 
-            // Aggiunto "CAM" per primo nella Heatmap
             let futureHtml = `
                 <div class="cal-row cal-header">
                     <div class="cal-date">Data</div>
@@ -335,8 +379,12 @@
                     let finalProj = 0;
                     if (z.onde && z.onde.length > 0) {
                         z.onde.forEach(onda => {
-                            let dToP = (distDalDatoCerto - onda.giorni_mancanti_da_ieri);
+                            let ritardoAggiuntivo = (isSenescenzaAttiva && z.zona !== "Camnasco") ? 4 : 0;
+                            let dToP = (distDalDatoCerto - (onda.giorni_mancanti_da_ieri + ritardoAggiuntivo));
+                            
                             let picco = onda.indice_picco || 0;
+                            if (isSenescenzaAttiva && z.zona !== "Camnasco") picco *= 0.6; 
+
                             if (picco > 0) {
                                 finalProj += picco * Math.exp(- (dToP*dToP)/(2 * 4.84));
                             }
@@ -364,7 +412,8 @@
 
         async function loadOpenMeteo() {
             const url = "https://api.open-meteo.com/v1/forecast?latitude=46.0770&longitude=9.2424&elevation=1222&hourly=temperature_2m,relative_humidity_2m,precipitation,windspeed_10m&timezone=Europe/Rome";
-            
+            let isSenescenzaAttiva = document.getElementById('toggle-senescenza') ? document.getElementById('toggle-senescenza').checked : false;
+
             try {
                 const res = await fetch(url);
                 if (!res.ok) throw new Error("Errore API Meteo: " + res.status);
@@ -382,7 +431,6 @@
                     if(h.windspeed_10m && h.windspeed_10m[i] !== null) daysMap[datePart].winds.push(h.windspeed_10m[i]);
                 }
 
-                // Camnasco rimosso dall'intestazione Meteo
                 let html = `
                     <div class="cal-row cal-header">
                         <div style="width: 45px;">Data</div>
@@ -416,14 +464,17 @@
                     let dots = '';
                     
                     globalData.zone.forEach((z) => {
-                        // Salto esplicitamente Camnasco dalla generazione dei quadrati Meteo
                         if (z.zona === "Camnasco") return; 
 
                         let finalProj = 0;
                         if (z.onde && z.onde.length > 0) {
                             z.onde.forEach(onda => {
-                                let dToP = (distDalDatoCerto - onda.giorni_mancanti_da_ieri);
+                                let ritardoAggiuntivo = (isSenescenzaAttiva && z.zona !== "Camnasco") ? 4 : 0;
+                                let dToP = (distDalDatoCerto - (onda.giorni_mancanti_da_ieri + ritardoAggiuntivo));
+                                
                                 let picco = onda.indice_picco || 0;
+                                if (isSenescenzaAttiva && z.zona !== "Camnasco") picco *= 0.6; 
+
                                 if (picco > 0) {
                                     finalProj += picco * Math.exp(- (dToP*dToP)/(2 * 4.84));
                                 }
@@ -431,7 +482,9 @@
                         }
                         
                         if (tmin < 6) finalProj *= 0.3; 
-                        if (vMax > 25 && pTot < 1.0) finalProj *= 0.5; 
+                        
+                        // Faggi Ovest è immune al Favonio!
+                        if (vMax > 25 && pTot < 1.0 && z.zona !== "Faggi Ovest") finalProj *= 0.5; 
                         
                         let pRounded = Math.round(finalProj / 10) * 10;
                         if(pRounded > 100) pRounded = 100;
