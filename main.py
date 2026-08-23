@@ -56,11 +56,9 @@ class AnalizzatoreSiccitaPorcini:
 
         eventi_trovati = [ev for ev in eventi_trovati if ev["giorni_da_evento"] <= 40]
 
-        # Rilevamento Notti Tropicali (T_min >= 19°C) su tutto lo storico disponibile (fino a 90 gg)
-        storico_recente = serie[-90:]
-        notti_tropicali = sum(1 for d in storico_recente if d.get("t_min", 0) >= 19.0)
-        # Abbassiamo prudentemente la soglia a 2 notti tropicali per sbloccare l'allerta se c'è stata anomalia
-        rischio_senescenza = notti_tropicali >= 2
+        # Rilevamento Notti Tropicali (Sensore Senescenza)
+        notti_tropicali = sum(1 for d in serie[-45:] if d.get("t_min", 0) >= 19.0)
+        rischio_senescenza = notti_tropicali >= 3
 
         diag = {
             "t_max_attuale": giorno_ieri["t_max"],
@@ -114,17 +112,20 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         else:
             t_max_eff, t_min_eff = t_max_b, t_min_b
             
+        # Microclima specifico: Camnasco
         if z["nome"] == "Camnasco":
             rh_eff = max(60.0, rh_eff) 
 
+        # Microclima specifico: Faggi Ovest (Sant'Amate)
         if z["nome"] == "Faggi Ovest":
-            t_min_eff += 1.0 
+            t_min_eff += 1.0 # Effetto termico rocce
 
         t_opt = 16.5 if z["essenza"] not in ["pino", "faggio"] else 14.5
         t_media_eff = (t_max_eff + t_min_eff) / 2
         f_T_media = math.exp(- ((t_media_eff - t_opt) ** 2) / (2 * (3.5 ** 2)))
         f_T_freddo = 0.0 if t_min_eff < 3.0 else ((t_min_eff - 3.0) / 4.0 if t_min_eff < 7.0 else 1.0)
         
+        # Grilletto Termico
         if 8.0 <= t_min_eff <= 13.0:
             f_grilletto = 1.3
         elif t_min_eff > 17.0:
@@ -137,6 +138,7 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         vento = diag["vento_max_attuale"]
         is_favonio = (vento > 20 and diag["rh_media_attuale"] < 60 and diag["pioggia_oggi"] < 1.0)
         
+        # Anfiteatro Sant'Amate: Immunità al vento
         if z["nome"] == "Faggi Ovest":
             phi_vento = 1.0
         else:
@@ -186,37 +188,20 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
     return res
 
 if __name__ == "__main__":
-    try:
-        with open("data/storico.json", "r") as f:
-            storico = json.load(f)
-    except FileNotFoundError:
-        storico = []
-
-    # Se vuoi simulare o se lo scraper fornisce il nuovo giorno, facciamo il merge sicuro per evitare perdite
-    # (Manteniamo una finestra mobile massima di 90 giorni ordinata per data)
-    storico_unito = {}
-    for d in storico:
-        if "data" in d:
-            storico_unito[d["data"]] = d
-            
-    storico_ordinato = sorted(storico_unito.values(), key=lambda x: x["data"])
-    # Tagliamo a massimo 90 giorni per evitare file enormi ma garantendo l'accumulo
-    storico_finale = storico_ordinato[-90:]
-
+    with open("data/storico.json", "r") as f:
+        storico = json.load(f)
+    
     analizzatore = AnalizzatoreSiccitaPorcini()
-    diagnosi = analizzatore.analizza(storico_finale)
+    diagnosi = analizzatore.analizza(storico)
     microzone = calcola_microzone(diagnosi)
     
     output = {
         "ultimo_aggiornamento": datetime.now().isoformat(),
         "diagnosi_meteo": diagnosi,
         "zone": microzone,
-        "storico_completo": storico_finale
+        "storico_completo": storico
     }
     
     with open("data/previsioni.json", "w") as f:
         json.dump(output, f, indent=4)
-        
-    # Salviamo anche lo storico aggiornato
-    with open("data/storico.json", "w") as f:
-        json.dump(storico_finale, f, indent=4)
+
