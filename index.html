@@ -287,6 +287,23 @@
                 consiglio = "Siamo a fine ciclo. I funghi superstiti li trovi in alto (sopra i 1500m), nei boschi bui o protetti dai pini (habitat del Pinophilus). 🏔️";
             }
             
+// --- CALCOLO DINAMICO DELL'ONDA ALTITUDINALE ---
+            if (ggDaEvento !== null && ggDaEvento >= 5 && !isSenescenzaAttiva && tmin >= 6) {
+                
+                // La formula: parte da 1440m al giorno 6 e scende di 40 metri al giorno
+                let quotaDinamica = 1440 - ((ggDaEvento - 6) * 40);
+                
+                // Mettiamo dei "paletti" fisici per non far uscire l'onda dalla tua montagna
+                if (quotaDinamica > 1550) quotaDinamica = 1550;
+                if (quotaDinamica < 700) quotaDinamica = 700;
+                
+                // Arrotondiamo ai 50 metri più vicini (es. 1200m, 1250m) per renderlo leggibile
+                let quotaArrotondata = Math.round(quotaDinamica / 50) * 50;
+                
+                // Aggiungiamo il mirino al consiglio del giorno
+                consiglio += `<br><br>🎯 <b>Il Mirino Altitudinale:</b> L'onda termica si sta muovendo. Oggi ti consiglio di tagliare il versante "in costa", mantenendoti rigorosamente intorno a quota <b>${quotaArrotondata} metri</b>.`;
+            }
+ 
             document.getElementById('consiglio-text').innerHTML = consiglio;
 
             const zc = document.getElementById('zone-container');
