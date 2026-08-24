@@ -58,6 +58,7 @@
         .nav-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
         .chart-container { position: relative; height: 200px; width: 100%; }
         .hidden { display: none; }
+        .cal-date.domenica { color: #d32f2f !important; font-weight: 900; }
     </style>
 </head>
 <body>
@@ -363,17 +364,22 @@
             // Mostriamo fino a 60 giorni nello storico passato per vedere anche luglio
             const past = data.storico_completo.slice(-60).reverse();
             let pastHtml = '';
+            // Storico Dati Certi
             past.forEach(d => {
                 let icon = getMeteoIcon(d.pioggia_mm, d.vento_max, d.t_min);
+                // Controllo se è domenica (0 = Domenica in JavaScript)
+                let isDomenica = new Date(d.data).getDay() === 0 ? " domenica" : "";
+                
                 pastHtml += `
                     <div class="cal-row">
-                        <div class="cal-date">${formatDDMM(d.data)}</div>
+                        <div class="cal-date${isDomenica}">${formatDDMM(d.data)}</div>
                         <div class="cal-luna">${getFaseLunare(d.data)}</div>
                         <div class="cal-icon">${icon}</div>
                         <div class="cal-data">${d.pioggia_mm}mm | ${Math.round(d.t_min)}°/${Math.round(d.t_max)}°</div>
                         <div class="cal-diario">${diario[d.data] ? '🍄' : ''}</div>
                     </div>`;
             });
+
             document.getElementById('past-calendar').innerHTML = pastHtml;
 
             let futureHtml = `
@@ -423,12 +429,16 @@
                     dots += `<div class="future-dot" style="background-color: ${c.bg}; color: ${c.txt}; border-color: ${c.border};">${label}</div>`;
                 });
 
+// Controllo se la data futura è domenica
+                let isDomenica = futureDate.getDay() === 0 ? " domenica" : "";
+
                 futureHtml += `
                     <div class="cal-row">
-                        <div class="cal-date">${String(futureDate.getDate()).padStart(2, '0')}/${String(futureDate.getMonth() + 1).padStart(2, '0')}</div>
+                        <div class="cal-date${isDomenica}">${String(futureDate.getDate()).padStart(2, '0')}/${String(futureDate.getMonth() + 1).padStart(2, '0')}</div>
                         <div class="cal-luna">${getFaseLunare(futureDate.toISOString().split('T')[0])}</div>
                         <div class="future-zones">${dots}</div>
                     </div>`;
+
             }
             document.getElementById('future-calendar').innerHTML = futureHtml;
         }
@@ -516,6 +526,8 @@
                         let label = pRounded === 0 ? '-' : pRounded + '%';
                         dots += `<div class="future-dot" style="background-color: ${c.bg}; color: ${c.txt}; border-color: ${c.border};">${label}</div>`;
                     });
+                    
+                    let isDomenica = dataObj.getDay() === 0 ? " domenica" : "";
 
                     html += `
                         <div class="cal-row" style="padding: 12px 0;">
