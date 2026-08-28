@@ -98,6 +98,7 @@ class AnalizzatoreSiccitaPorcini:
                 if not eventi_trovati or (idx - eventi_trovati[-1]["indice"]) >= 4:
                     p_pre_30 = sum(serie[k]["pioggia_mm"] for k in range(max(0, idx - 32), max(0, idx - 2)))
                     
+                    # Calcolo biologico del potenziale post-siccità
                     if p_pre_30 < 15.0: ritardo, soglia, smorz = 12, 60.0, 0.30 
                     elif 15.0 <= p_pre_30 < 30.0: ritardo, soglia, smorz = 7, 50.0, 0.70
                     elif 30.0 <= p_pre_30 < 60.0: ritardo, soglia, smorz = 3, 40.0, 0.90
@@ -126,6 +127,7 @@ class AnalizzatoreSiccitaPorcini:
 
         eventi_trovati = [ev for ev in eventi_trovati if ev["giorni_da_evento"] <= 40]
 
+        # Sensore Notti Tropicali su tutto l'archivio (fino a 90 gg)
         notti_tropicali = sum(1 for d in serie if d.get("t_min", 0) >= 19.0)
         rischio_senescenza = notti_tropicali >= 2
 
@@ -181,6 +183,7 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         else:
             t_max_eff, t_min_eff = t_max_b, t_min_b
             
+        # Correzioni speciali ecosistemi
         if z["nome"] == "Camnasco": rh_eff = max(60.0, rh_eff) 
         if z["nome"] == "Faggi Ovest": t_min_eff += 1.0 
 
@@ -189,6 +192,7 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         f_T_media = math.exp(- ((t_media_eff - t_opt) ** 2) / (2 * (3.5 ** 2)))
         f_T_freddo = 0.0 if t_min_eff < 3.0 else ((t_min_eff - 3.0) / 4.0 if t_min_eff < 7.0 else 1.0)
         
+        # Grilletto termico
         if 8.0 <= t_min_eff <= 13.0: f_grilletto = 1.3
         elif t_min_eff > 17.0: f_grilletto = 0.7
         else: f_grilletto = 1.0
@@ -197,6 +201,8 @@ def calcola_microzone(diag: Dict[str, Any], quota_stazione: int = 1285) -> List[
         
         vento = diag["vento_max_attuale"]
         is_favonio = (vento > 20 and diag["rh_media_attuale"] < 60 and diag["pioggia_oggi"] < 1.0)
+        
+        # Sant'Amate è protetta dal catino roccioso
         if z["nome"] == "Faggi Ovest": phi_vento = 1.0
         else: phi_vento = max(0.1, 1.0 - 0.04 * (vento - 20)) if is_favonio else 1.0
         
@@ -252,6 +258,7 @@ def main():
         print("Errore: nessun dato scaricato da ARPA.")
         return
 
+    # Carichiamo il vecchio storico (se esiste) per allungare la memoria dell'app
     storico_esistente = []
     try:
         if os.path.exists("data/storico.json"):
@@ -260,10 +267,12 @@ def main():
     except (FileNotFoundError, json.JSONDecodeError):
         pass
 
+    # Fusione dei dati: sovrascrive i giorni duplicati aggiornandoli e tiene i vecchi
     storico_unito = {d["data"]: d for d in storico_esistente if "data" in d}
     for d in nuovi_dati:
         storico_unito[d["data"]] = d
         
+    # Ordiniamo cronologicamente e teniamo gli ultimi 90 giorni
     storico_ordinato = sorted(storico_unito.values(), key=lambda x: x["data"])
     storico_finale = storico_ordinato[-90:]
 
@@ -288,4 +297,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
