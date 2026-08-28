@@ -43,7 +43,6 @@
 
         .cal-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; font-size: 0.9rem; }
         .cal-date { width: 55px; font-weight: bold; color: var(--text-light); }
-        .cal-date.domenica { color: #d32f2f !important; font-weight: 900; }
         .cal-luna { width: 25px; text-align: center; font-size: 1.1rem; }
         .cal-icon { width: 25px; text-align: center; font-size: 1.1rem; }
         .cal-data { flex-grow: 1; text-align: right; color: var(--text-light); font-size: 0.85rem; padding-right: 5px;}
@@ -59,6 +58,7 @@
         .nav-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
         .chart-container { position: relative; height: 200px; width: 100%; }
         .hidden { display: none; }
+        .cal-date.domenica { color: #d32f2f !important; font-weight: 900; }
     </style>
 </head>
 <body>
@@ -77,7 +77,7 @@
 
         <div class="card hidden" id="card-senescenza" style="background: #fff3e0; border: 1px solid #ffcc80;">
             <h2 class="section-title" style="color: #e65100; border-bottom-color: #ffb74d;">⚠️ Allerta Caldo Estremo</h2>
-            <p style="font-size: 0.85rem; margin-bottom: 10px;">L'algoritmo ha rilevato notti tropicali prolungate nello storico. Hai notato una senescenza parziale nel bosco?</p>
+            <p style="font-size: 0.85rem; margin-bottom: 10px;">L'algoritmo ha rilevato notti tropicali prolungate nello storico. Hai notato una senescenza parziale (caduta foglie ~20%) nel bosco?</p>
             <label style="font-weight: bold; color: #d84315; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                 <input type="checkbox" id="toggle-senescenza" onchange="aggiornaTutto();" style="transform: scale(1.5);">
                 Sì, applica penalità di stress vitale
@@ -138,7 +138,7 @@
     </div>
 
     <script>
-        // --- SOSTITUISCI CON IL TUO USERNAME GITHUB QUI SOTTO ---
+        // --- SOSTITUISCI CON IL TUO USERNAME ---
         const GITHUB_USERNAME = "geodiegogit"; 
         const REPO_NAME = "fungo-forecast"; 
         const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main/data/previsioni.json`;
@@ -265,91 +265,48 @@
             
             let isSenescenzaAttiva = document.getElementById('toggle-senescenza') ? document.getElementById('toggle-senescenza').checked : false;
 
-// --- NUOVO CERVELLO DEL FUNGIATT ---
-            let baseConsiglio = "";
-            
-            // Calcoliamo i giorni effettivi: se c'è senescenza, il bosco è indietro di 4 giorni
-            let ggEffettivi = (ggDaEvento !== null) ? (isSenescenzaAttiva ? ggDaEvento - 4 : ggDaEvento) : null;
+            let consiglio = "";
+            let tmin = diag.t_min_attuale;
+            let vento = diag.vento_max_attuale;
+            let rh = diag.rh_media_attuale;
 
-            if (ggDaEvento === null) {
-                baseConsiglio = "Il bosco è secco e in attesa. 🍂 L'unica speranza è cercare le zone con sorgenti sotterranee (Camnasco) o aspettare la pioggia.";
+            if (isSenescenzaAttiva && ggDaEvento !== null) {
+                consiglio = "🍂 Il bosco è in senescenza parziale. Le betulle stanno risparmiando energia. La buttata sarà ritardata e meno intensa del solito, concentrati sulle zone più umide.";
+            } else if (ggDaEvento === null) {
+                consiglio = "Il bosco è secco e in attesa. 🍂 L'unica speranza è cercare le zone con sorgenti sotterranee (Camnasco) o aspettare la pioggia.";
             } else if (tmin < 6) {
-                baseConsiglio = "Fa frècc di notte! 🥶 Lascia perdere le cime alte. Stai sotto i 1000m nei boschi ben esposti al sole (Sud/Sud-Est).";
+                consiglio = "Fa frècc di notte! 🥶 Lascia perdere le cime alte. Stai sotto i 1000m nei boschi ben esposti al sole (Sud/Sud-Est) per trovare l'habitat giusto.";
             } else if (vento > 25 && rh < 55) {
-                baseConsiglio = "Attento al vento secco! 💨 Ha asciugato i versanti aperti. Cerca rifugio nell'anfiteatro dei Faggi a Ovest (Sant'Amate).";
+                consiglio = "Attento al vento secco! 💨 Ha asciugato i versanti aperti. Cerca rifugio nell'anfiteatro dei Faggi a Ovest (Sant'Amate) che è protetto dal Favonio.";
+            } else if (ggDaEvento <= 5) {
+                consiglio = "La buttata si sta svegliando! 🌱 L'onda parte dal basso: punta tra i 700 e i 950m tra castagni e betulle, cercando i versanti baciati dal sole (Sud-Est).";
+            } else if (ggDaEvento > 5 && ggDaEvento <= 9) {
+                consiglio = "Siamo nel momento d'oro delle quote medie! 🍄 Esplora tra i 1000m e i 1300m (betulle e primi faggi). Le esposizioni Est e Sud-Est sono il top.";
+            } else if (ggDaEvento > 9 && ggDaEvento <= 14) {
+                consiglio = "L'onda sta salendo! 🌲 Le quote basse si asciugano. Spostati sui 1400-1500m nei faggi, provando anche le zone fresche a Nord-Est.";
             } else {
-                if (ggEffettivi <= 0) {
-                    baseConsiglio = "Il bosco sta riattivando la simbiosi dopo lo stress idrico. L'acqua è arrivata, ma c'è ancora un blocco metabolico temporaneo. Bisogna pazientare. ⏳";
-                } else if (ggEffettivi <= 5) {
-                    baseConsiglio = "La buttata si sta svegliando! 🌱 L'onda parte dal basso: punta tra i 700 e i 950m tra castagni e betulle, cercando i versanti baciati dal sole (Sud-Est).";
-                } else if (ggEffettivi > 5 && ggEffettivi <= 9) {
-                    baseConsiglio = "Siamo nel momento d'oro delle quote medie! 🍄 Esplora tra i 1000m e i 1300m (betulle e primi faggi). Le esposizioni Est e Sud-Est sono il top.";
-                } else if (ggEffettivi > 9 && ggEffettivi <= 14) {
-                    baseConsiglio = "L'onda sta salendo! 🌲 Le quote basse si asciugano. Spostati sui 1400-1500m nei faggi, provando anche le zone fresche a Nord-Est.";
-                } else {
-                    baseConsiglio = "Siamo a fine ciclo. I funghi superstiti li trovi in alto (sopra i 1500m), nei boschi bui o protetti dai pini (habitat del Pinophilus). 🏔️";
-                }
+                consiglio = "Siamo a fine ciclo. I funghi superstiti li trovi in alto (sopra i 1500m), nei boschi bui o protetti dai pini (habitat del Pinophilus). 🏔️";
             }
             
-            // Uniamo l'allerta senescenza con il consiglio reale
-            let consiglio = isSenescenzaAttiva && ggDaEvento !== null
-                ? `🍂 <b>Allerta Senescenza:</b> Le betulle stanno risparmiando energia. La buttata subirà un ritardo biologico (Camnasco escluso).<br><br>${baseConsiglio}`
-                : baseConsiglio;
-
-            // --- CALCOLO DINAMICO DELL'ONDA ALTITUDINALE CON SENESCENZA INTEGRATA ---
-            if (ggEffettivi !== null) {
-                if (ggEffettivi >= 5 && tmin >= 6) {
-                    let quotaDinamica = 1440 - ((ggEffettivi - 6) * 40);
-                    if (quotaDinamica > 1550) quotaDinamica = 1550;
-                    if (quotaDinamica < 700) quotaDinamica = 700;
-                    let quotaArrotondata = Math.round(quotaDinamica / 50) * 50;
-                    
-                    consiglio += `<br><br>🎯 <b>Il Mirino Altitudinale:</b> L'onda termica si sta muovendo. Oggi mantieniti in costa intorno a quota <b>${quotaArrotondata} metri</b>.`;
-                } else if (ggEffettivi > 0 && ggEffettivi < 5) {
-                    let ggMancanti = 5 - ggEffettivi;
-                    consiglio += `<br><br>🎯 <b>Il Mirino Altitudinale:</b> L'incubazione è in corso ma l'onda non è ancora pronta a spostarsi altimetricamente (mancano circa ${ggMancanti} gg).`;
-                }
-            }
-
-            // --- TOP SPOT SPECIFICI DI OGGI ---
-            const quoteZone = {
-                "Camnasco": 750,
-                "Betulle SE": 1200,
-                "Betulle NE": 1150,
-                "Faggi Ovest": 1550,
-                "Abeti Nord": 1500
-            };
-            
-            let zoneMigliori = [];
-            data.zone.forEach(z => {
-                let finalProj = 0;
-                let distDalDatoCerto = 1; 
-                if (z.onde && z.onde.length > 0) {
-                    z.onde.forEach(onda => {
-                        let ritardoAggiuntivo = (isSenescenzaAttiva && z.zona !== "Camnasco") ? 4 : 0;
-                        let dToP = (distDalDatoCerto - (onda.giorni_mancanti_da_ieri + ritardoAggiuntivo));
-                        let picco = onda.indice_picco || 0;
-                        if (isSenescenzaAttiva && z.zona !== "Camnasco") picco *= 0.6; 
-                        if (picco > 0) finalProj += picco * Math.exp(- (dToP*dToP)/(2 * 4.84));
-                    });
-                }
+// --- CALCOLO DINAMICO DELL'ONDA ALTITUDINALE ---
+            if (ggDaEvento !== null && ggDaEvento >= 5 && !isSenescenzaAttiva && tmin >= 6) {
                 
-                if (finalProj >= 40) { 
-                    zoneMigliori.push({ nome: z.zona, quota: quoteZone[z.zona], punteggio: finalProj });
-                }
-            });
-
-            zoneMigliori.sort((a, b) => b.punteggio - a.punteggio);
-
-            if (zoneMigliori.length > 0) {
-                let suggerimenti = zoneMigliori.map(z => `<b>${z.nome}</b> (${z.quota}m)`).join(" e ");
-                consiglio += `<br><br>📍 <b>Top Spot:</b> Oggi ti consiglio di concentrare le ricerche su ${suggerimenti}.`;
+                // La formula: parte da 1440m al giorno 6 e scende di 40 metri al giorno
+                let quotaDinamica = 1440 - ((ggDaEvento - 6) * 40);
+                
+                // Mettiamo dei "paletti" fisici per non far uscire l'onda dalla tua montagna
+                if (quotaDinamica > 1550) quotaDinamica = 1550;
+                if (quotaDinamica < 700) quotaDinamica = 700;
+                
+                // Arrotondiamo ai 50 metri più vicini (es. 1200m, 1250m) per renderlo leggibile
+                let quotaArrotondata = Math.round(quotaDinamica / 50) * 50;
+                
+                // Aggiungiamo il mirino al consiglio del giorno
+                consiglio += `<br><br>🎯 <b>Il Mirino Altitudinale:</b> L'onda termica si sta muovendo. Oggi ti consiglio di tagliare il versante "in costa", mantenendoti rigorosamente intorno a quota <b>${quotaArrotondata} metri</b>.`;
             }
-            
+ 
             document.getElementById('consiglio-text').innerHTML = consiglio;
 
-            
-            // --- RENDERING ZONE HEATMAP CRUSCOTTO ---
             const zc = document.getElementById('zone-container');
             zc.innerHTML = '';
             
@@ -404,10 +361,13 @@
             let diario = JSON.parse(localStorage.getItem('diario_funghi')) || {};
             let isSenescenzaAttiva = document.getElementById('toggle-senescenza') ? document.getElementById('toggle-senescenza').checked : false;
             
+            // Mostriamo fino a 60 giorni nello storico passato per vedere anche luglio
             const past = data.storico_completo.slice(-60).reverse();
             let pastHtml = '';
+            // Storico Dati Certi
             past.forEach(d => {
                 let icon = getMeteoIcon(d.pioggia_mm, d.vento_max, d.t_min);
+                // Controllo se è domenica (0 = Domenica in JavaScript)
                 let isDomenica = new Date(d.data).getDay() === 0 ? " domenica" : "";
                 
                 pastHtml += `
@@ -419,6 +379,7 @@
                         <div class="cal-diario">${diario[d.data] ? '🍄' : ''}</div>
                     </div>`;
             });
+
             document.getElementById('past-calendar').innerHTML = pastHtml;
 
             let futureHtml = `
@@ -468,6 +429,7 @@
                     dots += `<div class="future-dot" style="background-color: ${c.bg}; color: ${c.txt}; border-color: ${c.border};">${label}</div>`;
                 });
 
+// Controllo se la data futura è domenica
                 let isDomenica = futureDate.getDay() === 0 ? " domenica" : "";
 
                 futureHtml += `
@@ -476,6 +438,7 @@
                         <div class="cal-luna">${getFaseLunare(futureDate.toISOString().split('T')[0])}</div>
                         <div class="future-zones">${dots}</div>
                     </div>`;
+
             }
             document.getElementById('future-calendar').innerHTML = futureHtml;
         }
@@ -506,7 +469,6 @@
                         <div style="width: 45px;">Data</div>
                         <div style="flex-grow: 1; padding-left: 5px;">Meteo (1.222m)</div>
                         <div class="future-zones">
-                            <div class="z-label">CAM</div>
                             <div class="z-label">B.SE</div>
                             <div class="z-label">B.NE</div>
                             <div class="z-label">FAG</div>
@@ -530,14 +492,16 @@
                     let dataObj = new Date(date);
                     let nomeGiorno = count === 0 ? "Oggi" : (count === 1 ? "Domani" : giorni[dataObj.getDay()]);
                     let icona = getMeteoIcon(parseFloat(pTot), vMax, tmin);
-                    let isDomenica = dataObj.getDay() === 0 ? " domenica" : "";
                     
                     let distDalDatoCerto = count + 1; 
                     let dots = '';
                     
                     globalData.zone.forEach((z) => {
+                        if (z.zona === "Camnasco") return; 
+
                         let finalProj = 0;
                         if (z.onde && z.onde.length > 0) {
+                            z.onde.onda?.forEach?.(onda => {}); // safe guard
                             z.onde.forEach(onda => {
                                 let ritardoAggiuntivo = (isSenescenzaAttiva && z.zona !== "Camnasco") ? 4 : 0;
                                 let dToP = (distDalDatoCerto - (onda.giorni_mancanti_da_ieri + ritardoAggiuntivo));
@@ -562,10 +526,12 @@
                         let label = pRounded === 0 ? '-' : pRounded + '%';
                         dots += `<div class="future-dot" style="background-color: ${c.bg}; color: ${c.txt}; border-color: ${c.border};">${label}</div>`;
                     });
+                    
+                    let isDomenica = dataObj.getDay() === 0 ? " domenica" : "";
 
                     html += `
                         <div class="cal-row" style="padding: 12px 0;">
-                            <div class="cal-date${isDomenica}" style="width: 45px; font-size: 0.8rem; line-height: 1.2;">
+                            <div class="cal-date" style="width: 45px; font-size: 0.8rem; line-height: 1.2;">
                                 ${nomeGiorno}<br>
                                 <span style="font-weight:normal; font-size:0.7rem;">${date.substring(8,10)}/${date.substring(5,7)}</span>
                             </div>
@@ -578,6 +544,7 @@
                         </div>`;
                     count++;
                 }
+                document.getElementById('forecast-container').html = html; // fix syntax error below
                 document.getElementById('forecast-container').innerHTML = html;
             } catch (e) {
                 document.getElementById('forecast-container').innerHTML = "Errore nel caricamento previsioni: " + e.message;
